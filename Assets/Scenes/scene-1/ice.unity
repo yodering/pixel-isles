@@ -8251,7 +8251,7 @@ EdgeCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_EdgeRadius: 0
+  m_EdgeRadius: 0.03
   m_Points:
   - {x: -0.25657117, y: 3.5134249}
   - {x: 2.3061748, y: 2.1118565}
