@@ -96,3 +96,7 @@ crashlytics-build.properties
 # Plastic SCM (if used)
 .plastic/
 ignore.conf
+
+
+.claude
+.vscode
