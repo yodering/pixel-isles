@@ -2,10 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-
-namespace SmallScaleInc.TopDownPixelCharactersPack1
-{
-    public class AnimationController : MonoBehaviour
+public class AnimationController : MonoBehaviour
     {
         private Animator animator;
         public string currentDirection = "isEast"; // Default direction
@@ -831,9 +828,6 @@ namespace SmallScaleInc.TopDownPixelCharactersPack1
             animator.SetBool("AttackSpinSouthWest", false);
 
             // Optionally, restore the direction to ensure the character returns to the correct idle state
-            RestoreDirectionAfterAttack(); 
+            RestoreDirectionAfterAttack();
         }
-
-
     }
-}

@@ -1,9 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
-namespace SmallScaleInc.TopDownPixelCharactersPack1
-{
-    public class PlayerController : MonoBehaviour
+public class PlayerController : MonoBehaviour
     {
         public float speed = 2.0f; //the movement speed of the player
         private Rigidbody2D rb;
@@ -283,8 +281,4 @@ namespace SmallScaleInc.TopDownPixelCharactersPack1
                 Destroy(aoeInstance, 0.5f);
             }
         }
-
-
-
     }
-}
