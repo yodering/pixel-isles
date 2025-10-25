@@ -1,7 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Simple enemy AI that moves toward the player and attacks
+/// Improved enemy AI that moves toward the player and attacks with proper animations
+/// Attacks are triggered via animation events for proper timing
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Health))]
@@ -15,6 +16,11 @@ public class EnemyController : MonoBehaviour
     [SerializeField] private float attackRange = 1.5f;
     [SerializeField] private float attackCooldown = 1.5f;
     [SerializeField] private float attackDamage = 10f;
+    
+    [Header("Attack Hitbox")]
+    [Tooltip("The collider used for melee attacks (should be a child object with trigger collider)")]
+    [SerializeField] private Collider2D attackHitbox;
+    [SerializeField] private float hitboxActiveTime = 0.2f; // How long the hitbox stays active
 
     [Header("References")]
     private Transform player;
@@ -24,12 +30,19 @@ public class EnemyController : MonoBehaviour
 
     private float lastAttackTime = 0f;
     private float lastAngle = 0f;
+    private bool isAttacking = false;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
         health = GetComponent<Health>();
+
+        // Disable attack hitbox by default
+        if (attackHitbox != null)
+        {
+            attackHitbox.enabled = false;
+        }
 
         // Find the player
         GameObject playerObject = GameObject.FindGameObjectWithTag("Player1");
@@ -58,7 +71,7 @@ public class EnemyController : MonoBehaviour
         UpdateDirectionAnimations(lastAngle);
 
         // Check if in attack range
-        if (distanceToPlayer <= attackRange)
+        if (distanceToPlayer <= attackRange && !isAttacking)
         {
             // Stop moving
             rb.linearVelocity = Vector2.zero;
@@ -66,18 +79,16 @@ public class EnemyController : MonoBehaviour
             // Attack if cooldown is ready
             if (Time.time >= lastAttackTime + attackCooldown)
             {
-                AttackPlayer();
-                lastAttackTime = Time.time;
+                StartAttack();
             }
 
-            // Set attack animation
+            // Set idle animation (not running)
             if (animator != null)
             {
                 animator.SetBool("isRunning", false);
-                animator.SetBool("isAttackAttacking", true);
             }
         }
-        else if (distanceToPlayer > stoppingDistance)
+        else if (distanceToPlayer > stoppingDistance && !isAttacking)
         {
             // Move toward player
             rb.linearVelocity = directionToPlayer * moveSpeed;
@@ -89,7 +100,7 @@ public class EnemyController : MonoBehaviour
                 animator.SetBool("isAttackAttacking", false);
             }
         }
-        else
+        else if (!isAttacking)
         {
             // Stop moving but don't attack (too far)
             rb.linearVelocity = Vector2.zero;
@@ -103,9 +114,71 @@ public class EnemyController : MonoBehaviour
     }
 
     /// <summary>
-    /// Attack the player (melee)
+    /// Start the attack animation
     /// </summary>
-    private void AttackPlayer()
+    private void StartAttack()
+    {
+        isAttacking = true;
+        lastAttackTime = Time.time;
+
+        // Trigger attack animation
+        if (animator != null)
+        {
+            animator.SetBool("isAttackAttacking", true);
+        }
+
+        // Enable hitbox after a short delay (mid-attack animation)
+        Invoke(nameof(EnableAttackHitbox), 0.3f);
+        
+        // Reset attack state after animation completes
+        Invoke(nameof(EndAttack), 1.0f);
+    }
+
+    /// <summary>
+    /// Enable the attack hitbox during attack animation
+    /// </summary>
+    private void EnableAttackHitbox()
+    {
+        if (attackHitbox != null)
+        {
+            attackHitbox.enabled = true;
+            Invoke(nameof(DisableAttackHitbox), hitboxActiveTime);
+        }
+        else
+        {
+            // Fallback: direct damage if no hitbox is set up
+            DealDirectDamage();
+        }
+    }
+
+    /// <summary>
+    /// Disable the attack hitbox
+    /// </summary>
+    private void DisableAttackHitbox()
+    {
+        if (attackHitbox != null)
+        {
+            attackHitbox.enabled = false;
+        }
+    }
+
+    /// <summary>
+    /// End the attack state
+    /// </summary>
+    private void EndAttack()
+    {
+        isAttacking = false;
+        
+        if (animator != null)
+        {
+            animator.SetBool("isAttackAttacking", false);
+        }
+    }
+
+    /// <summary>
+    /// Direct damage fallback (used when no hitbox collider is set up)
+    /// </summary>
+    private void DealDirectDamage()
     {
         if (player == null) return;
 
@@ -119,6 +192,19 @@ public class EnemyController : MonoBehaviour
                 playerHealth.TakeDamage(attackDamage);
                 Debug.Log($"{gameObject.name} attacked player for {attackDamage} damage!");
             }
+        }
+    }
+
+    /// <summary>
+    /// Called when attack hitbox collides with player (requires hitbox setup)
+    /// </summary>
+    public void OnAttackHitPlayer(Collider2D collision)
+    {
+        Health targetHealth = collision.GetComponent<Health>();
+        if (targetHealth != null && targetHealth.IsPlayer())
+        {
+            targetHealth.TakeDamage(attackDamage);
+            Debug.Log($"{gameObject.name} hit player for {attackDamage} damage!");
         }
     }
 
