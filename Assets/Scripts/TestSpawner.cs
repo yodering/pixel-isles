@@ -1,20 +1,37 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
-/// Simple test spawner to manually spawn enemies for testing
-/// Press T to spawn an enemy at a random position
+/// Improved spawner that spawns enemies within designated spawn area colliders
+/// Press T to spawn an enemy at a random position within spawn areas
 /// </summary>
 public class TestSpawner : MonoBehaviour
 {
     [Header("Spawn Settings")]
     [SerializeField] private GameObject enemyPrefab;
-    [SerializeField] private float spawnRadius = 10f;
-    [SerializeField] private int maxEnemies = 10;
+    [SerializeField] private int maxEnemies = 5;
+    
+    [Header("Spawn Areas")]
+    [Tooltip("Assign BoxCollider2D objects marked as triggers that define spawn areas")]
+    [SerializeField] private BoxCollider2D[] spawnAreas;
+    
+    [Header("Auto-Find Spawn Areas")]
+    [Tooltip("If true, automatically finds all GameObjects with 'spawn' in their name")]
+    [SerializeField] private bool autoFindSpawnAreas = true;
 
     [Header("References")]
     [SerializeField] private Transform player;
 
     private int currentEnemyCount = 0;
+
+    void Start()
+    {
+        // Auto-find spawn areas if enabled
+        if (autoFindSpawnAreas && (spawnAreas == null || spawnAreas.Length == 0))
+        {
+            FindSpawnAreas();
+        }
+    }
 
     void Update()
     {
@@ -38,7 +55,32 @@ public class TestSpawner : MonoBehaviour
     }
 
     /// <summary>
-    /// Spawn a single enemy at a random position around the player
+    /// Automatically find all spawn area colliders in the scene
+    /// </summary>
+    private void FindSpawnAreas()
+    {
+        List<BoxCollider2D> foundAreas = new List<BoxCollider2D>();
+        
+        // Find all GameObjects with "spawn" in their name
+        GameObject[] allObjects = GameObject.FindObjectsOfType<GameObject>();
+        foreach (GameObject obj in allObjects)
+        {
+            if (obj.name.ToLower().Contains("spawn"))
+            {
+                BoxCollider2D collider = obj.GetComponent<BoxCollider2D>();
+                if (collider != null && collider.isTrigger)
+                {
+                    foundAreas.Add(collider);
+                }
+            }
+        }
+        
+        spawnAreas = foundAreas.ToArray();
+        Debug.Log($"TestSpawner: Found {spawnAreas.Length} spawn areas");
+    }
+
+    /// <summary>
+    /// Spawn a single enemy at a random position within spawn areas
     /// </summary>
     public void SpawnEnemy()
     {
@@ -48,53 +90,58 @@ public class TestSpawner : MonoBehaviour
             return;
         }
 
-        if (player == null)
-        {
-            GameObject playerObj = GameObject.FindGameObjectWithTag("Player1");
-            if (playerObj != null)
-            {
-                player = playerObj.transform;
-            }
-            else
-            {
-                Debug.LogWarning("TestSpawner: No player found!");
-                return;
-            }
-        }
-
         if (currentEnemyCount >= maxEnemies)
         {
             Debug.Log("TestSpawner: Max enemies reached!");
             return;
         }
 
-        // Random position around player
-        Vector2 randomDirection = Random.insideUnitCircle.normalized;
-        Vector3 spawnPosition = player.position + new Vector3(randomDirection.x, randomDirection.y, 0) * spawnRadius;
+        if (spawnAreas == null || spawnAreas.Length == 0)
+        {
+            Debug.LogWarning("TestSpawner: No spawn areas defined! Add BoxCollider2D components to GameObjects named 'spawn1', 'spawn2', etc.");
+            return;
+        }
+
+        // Pick a random spawn area
+        BoxCollider2D spawnArea = spawnAreas[Random.Range(0, spawnAreas.Length)];
+        
+        // Get random position within the spawn area bounds
+        Vector3 spawnPosition = GetRandomPositionInBounds(spawnArea);
 
         // Spawn the enemy
         GameObject enemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
         enemy.tag = "Enemy";
 
-        Debug.Log($"Spawned enemy at {spawnPosition}. Total enemies: {currentEnemyCount + 1}");
+        Debug.Log($"Spawned enemy at {spawnPosition} in {spawnArea.gameObject.name}. Total enemies: {currentEnemyCount + 1}");
     }
 
-    // Visualize spawn radius in editor
+    /// <summary>
+    /// Get a random position within a BoxCollider2D bounds
+    /// </summary>
+    private Vector3 GetRandomPositionInBounds(BoxCollider2D collider)
+    {
+        Bounds bounds = collider.bounds;
+        
+        float randomX = Random.Range(bounds.min.x, bounds.max.x);
+        float randomY = Random.Range(bounds.min.y, bounds.max.y);
+        
+        return new Vector3(randomX, randomY, 0);
+    }
+
+    // Visualize spawn areas in editor
     private void OnDrawGizmosSelected()
     {
-        if (player == null)
-        {
-            GameObject playerObj = GameObject.FindGameObjectWithTag("Player1");
-            if (playerObj != null)
-            {
-                player = playerObj.transform;
-            }
-        }
-
-        if (player != null)
+        if (spawnAreas != null && spawnAreas.Length > 0)
         {
             Gizmos.color = Color.green;
-            Gizmos.DrawWireSphere(player.position, spawnRadius);
+            foreach (BoxCollider2D area in spawnAreas)
+            {
+                if (area != null)
+                {
+                    Bounds bounds = area.bounds;
+                    Gizmos.DrawWireCube(bounds.center, bounds.size);
+                }
+            }
         }
     }
 }
