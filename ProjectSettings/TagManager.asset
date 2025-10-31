@@ -45,6 +45,15 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: World
+    uniqueID: 2774473465
+    locked: 0
+  - name: Player
+    uniqueID: 2336038661
+    locked: 0
+  - name: Masking
+    uniqueID: 4067062787
+    locked: 0
   m_RenderingLayers:
   - Default
   - Light Layer 1
