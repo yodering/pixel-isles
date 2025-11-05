@@ -62,7 +62,7 @@ public class TestSpawner : MonoBehaviour
         List<BoxCollider2D> foundAreas = new List<BoxCollider2D>();
         
         // Find all GameObjects with "spawn" in their name
-        GameObject[] allObjects = GameObject.FindObjectsOfType<GameObject>();
+        GameObject[] allObjects = GameObject.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
         foreach (GameObject obj in allObjects)
         {
             if (obj.name.ToLower().Contains("spawn"))
@@ -112,7 +112,7 @@ public class TestSpawner : MonoBehaviour
         GameObject enemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
         enemy.tag = "Enemy";
 
-        Debug.Log($"Spawned enemy at {spawnPosition} in {spawnArea.gameObject.name}. Total enemies: {currentEnemyCount + 1}");
+        Debug.Log($"Spawned enemy {currentEnemyCount + 1}/{maxEnemies} at ({spawnPosition.x:F1}, {spawnPosition.y:F1}) via {spawnArea.gameObject.name}");
     }
 
     /// <summary>
