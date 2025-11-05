@@ -1,7 +1,7 @@
 # This .gitignore file should be placed at the root of your Unity project directory
 
 # ignore all meta files
-*.meta
+*.cs.meta
 
 # Unity generated files
 [Ll]ibrary/
