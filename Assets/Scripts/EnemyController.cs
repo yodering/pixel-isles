@@ -9,8 +9,10 @@ using UnityEngine;
 public class EnemyController : MonoBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float moveSpeed = 1.5f;
+    [SerializeField] private float moveSpeed = 1.3f; // Slower than player (player is 2.0)
     [SerializeField] private float stoppingDistance = 1.5f; // How close before stopping
+    [SerializeField] private float stuckCheckInterval = 1.0f; // How often to check if stuck
+    [SerializeField] private float stuckThreshold = 0.05f; // Minimum movement to not be stuck
 
     [Header("Attack")]
     [SerializeField] private float attackRange = 1.5f;
@@ -31,12 +33,35 @@ public class EnemyController : MonoBehaviour
     private float lastAttackTime = 0f;
     private float lastAngle = 0f;
     private bool isAttacking = false;
+    private string currentAttackAnimationParam = null;
+    
+    // Stuck detection
+    private Vector2 lastPosition;
+    private float lastStuckCheck = 0f;
+    private Vector2 unstuckDirection = Vector2.zero;
+    private float unstuckTimer = 0f;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
         health = GetComponent<Health>();
+        lastPosition = transform.position;
+
+        // Ensure player-only scripts are DESTROYED on enemies (not just disabled)
+        PlayerController playerController = GetComponent<PlayerController>();
+        if (playerController != null)
+        {
+            Debug.Log($"{gameObject.name}: Removing PlayerController component");
+            Destroy(playerController);
+        }
+
+        AnimationController animationController = GetComponent<AnimationController>();
+        if (animationController != null)
+        {
+˝            Debug.Log($"{gameObject.name}: Removing AnimationController component");
+            Destroy(animationController);
+        }
 
         // Disable attack hitbox by default
         if (attackHitbox != null)
@@ -63,24 +88,38 @@ public class EnemyController : MonoBehaviour
         float distanceToPlayer = Vector2.Distance(transform.position, player.position);
 
         // Calculate direction to player
-        Vector2 directionToPlayer = (player.position - transform.position).normalized;
-        float angle = Mathf.Atan2(directionToPlayer.y, directionToPlayer.x) * Mathf.Rad2Deg;
+        Vector2 desiredDirection = (player.position - transform.position).normalized;
+
+        // Update stuck detection state
+        UpdateStuckState(distanceToPlayer, desiredDirection);
+
+        Vector2 moveDirection = unstuckTimer > 0f ? unstuckDirection : desiredDirection;
+        if (moveDirection.sqrMagnitude <= 0.0001f)
+        {
+            moveDirection = desiredDirection;
+        }
+        else
+        {
+            moveDirection = moveDirection.normalized;
+        }
+
+        float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
         lastAngle = SnapAngleToEightDirections(angle);
 
         // Update directional animations
         UpdateDirectionAnimations(lastAngle);
 
+        bool playerInStrikeRange = IsPlayerWithinStrikeRange(distanceToPlayer);
+
+        // Check if attack hitbox is in range and cooldown is ready
+        bool canAttack = playerInStrikeRange && Time.time >= lastAttackTime + attackCooldown;
+
         // Check if in attack range
-        if (distanceToPlayer <= attackRange && !isAttacking)
+        if (canAttack && !isAttacking)
         {
             // Stop moving
             rb.linearVelocity = Vector2.zero;
-
-            // Attack if cooldown is ready
-            if (Time.time >= lastAttackTime + attackCooldown)
-            {
-                StartAttack();
-            }
+            StartAttack();
 
             // Set idle animation (not running)
             if (animator != null)
@@ -90,8 +129,9 @@ public class EnemyController : MonoBehaviour
         }
         else if (distanceToPlayer > stoppingDistance && !isAttacking)
         {
-            // Move toward player
-            rb.linearVelocity = directionToPlayer * moveSpeed;
+            // Move toward player or use unstuck direction
+            Vector2 desiredVelocity = moveDirection.sqrMagnitude > 0.0001f ? moveDirection * moveSpeed : Vector2.zero;
+            rb.linearVelocity = desiredVelocity;
 
             // Set running animation
             if (animator != null)
@@ -125,6 +165,7 @@ public class EnemyController : MonoBehaviour
         if (animator != null)
         {
             animator.SetBool("isAttackAttacking", true);
+            TriggerAttackAnimation();
         }
 
         // Enable hitbox after a short delay (mid-attack animation)
@@ -172,6 +213,7 @@ public class EnemyController : MonoBehaviour
         if (animator != null)
         {
             animator.SetBool("isAttackAttacking", false);
+            ResetAttackAnimationFlags();
         }
     }
 
@@ -260,6 +302,136 @@ public class EnemyController : MonoBehaviour
         else if (angle == 225) animator.SetBool("isSouthWest", true);
         else if (angle == 270) animator.SetBool("isSouth", true);
         else if (angle == 315) animator.SetBool("isSouthEast", true);
+    }
+
+    private void TriggerAttackAnimation()
+    {
+        if (animator == null) return;
+
+        ResetAttackAnimationFlags();
+
+        string direction = GetDirectionNameForAngle(lastAngle);
+        string attackBase = Random.value < 0.5f ? "AttackAttack" : "Attack2";
+        currentAttackAnimationParam = attackBase + direction;
+
+        animator.SetBool(currentAttackAnimationParam, true);
+    }
+
+    private void ResetAttackAnimationFlags()
+    {
+        if (animator == null) return;
+
+        if (!string.IsNullOrEmpty(currentAttackAnimationParam))
+        {
+            animator.SetBool(currentAttackAnimationParam, false);
+            currentAttackAnimationParam = null;
+        }
+
+        animator.SetBool("isAttackRunning", false);
+    }
+
+    private string GetDirectionNameForAngle(float angle)
+    {
+        switch ((int)angle)
+        {
+            case 0: return "East";
+            case 45: return "NorthEast";
+            case 90: return "North";
+            case 135: return "NorthWest";
+            case 180: return "West";
+            case 225: return "SouthWest";
+            case 270: return "South";
+            case 315: return "SouthEast";
+            default: return "East";
+        }
+    }
+
+    private bool IsPlayerWithinStrikeRange(float fallbackDistance)
+    {
+        if (player == null)
+        {
+            return false;
+        }
+
+        if (attackHitbox == null)
+        {
+            return fallbackDistance <= attackRange * 0.5f;
+        }
+
+        float reach = GetHitboxReach();
+        float centerDistance = Vector2.Distance(attackHitbox.transform.position, player.position);
+
+        return centerDistance <= reach + 0.05f;
+    }
+
+    private float GetHitboxReach()
+    {
+        if (attackHitbox == null)
+        {
+            return attackRange;
+        }
+
+        float reach = attackRange;
+
+        if (attackHitbox is BoxCollider2D box)
+        {
+            Vector2 scaledSize = new Vector2(box.size.x * Mathf.Abs(box.transform.lossyScale.x), box.size.y * Mathf.Abs(box.transform.lossyScale.y));
+            reach = scaledSize.magnitude * 0.5f;
+        }
+        else
+        {
+            reach = attackHitbox.bounds.extents.magnitude;
+        }
+
+        return reach;
+    }
+
+    private void UpdateStuckState(float distanceToPlayer, Vector2 desiredDirection)
+    {
+        if (isAttacking)
+        {
+            lastPosition = transform.position;
+            lastStuckCheck = Time.time;
+            return;
+        }
+
+        if (unstuckTimer > 0f)
+        {
+            unstuckTimer -= Time.deltaTime;
+            if (unstuckTimer <= 0f)
+            {
+                unstuckTimer = 0f;
+                unstuckDirection = Vector2.zero;
+            }
+        }
+
+        if (Time.time < lastStuckCheck + stuckCheckInterval)
+        {
+            return;
+        }
+
+        Vector2 currentPosition = transform.position;
+        float movedDistance = Vector2.Distance(currentPosition, lastPosition);
+
+        // Only trigger unstuck if we're truly stuck (trying to move but not moving much)
+        if (movedDistance < stuckThreshold && distanceToPlayer > stoppingDistance + 0.5f)
+        {
+            // Try to move perpendicular to desired direction
+            Vector2 perpendicular = new Vector2(-desiredDirection.y, desiredDirection.x);
+            
+            if (Random.value > 0.5f)
+            {
+                perpendicular = -perpendicular;
+            }
+
+            unstuckDirection = perpendicular.normalized;
+            unstuckTimer = 0.5f; // Shorter unstuck duration
+            
+            Debug.Log($"{gameObject.name} detected stuck, trying perpendicular movement");
+        }
+
+        lastPosition = currentPosition;
+        lastStuckCheck = Time.time;
     }
 
     // Visualize attack range in editor
