@@ -8,6 +8,9 @@ public class AnimationController : MonoBehaviour
         public string currentDirection = "isEast"; // Default direction
         public bool isCurrentlyRunning; //for debugging purposes
         public bool isCrouching = false;
+        
+        [Header("Attack Hitbox")]
+        [SerializeField] private PlayerAttackHitbox attackHitbox;
 
         void Start()
         {
@@ -271,6 +274,20 @@ public class AnimationController : MonoBehaviour
             // Set the specific attacking flags based on whether the character is running or not
             animator.SetBool("isAttackAttacking", !isRunning);
             animator.SetBool("isAttackRunning", isRunning);
+            
+            // Enable attack hitbox with delay (mid-attack animation)
+            if (attackHitbox != null)
+            {
+                Invoke(nameof(EnableAttackHitbox), 0.2f);
+            }
+        }
+        
+        void EnableAttackHitbox()
+        {
+            if (attackHitbox != null)
+            {
+                attackHitbox.EnableHitbox(0.2f); // Enable for 0.2 seconds
+            }
         }
 
 
