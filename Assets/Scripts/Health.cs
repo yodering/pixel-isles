@@ -20,11 +20,15 @@ public class Health : MonoBehaviour
 
     private bool isDead = false;
     private Animator animator;
+    private SpriteRenderer spriteRenderer;
+    private float fadeOutDuration = 0.8f;
+    private float fadeOutTimer = 0f;
 
     void Start()
     {
         currentHealth = maxHealth;
         animator = GetComponent<Animator>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
     /// <summary>
@@ -109,10 +113,24 @@ public class Health : MonoBehaviour
             collider.enabled = false;
         }
 
-        // Destroy after death animation (2 seconds)
+        // Start fade out and destroy after shorter delay
         if (!isPlayer)
         {
-            Destroy(gameObject, 2f);
+            fadeOutTimer = 0f;
+            Destroy(gameObject, fadeOutDuration);
+        }
+    }
+
+    void Update()
+    {
+        // Handle fade out effect when dead
+        if (isDead && !isPlayer && spriteRenderer != null)
+        {
+            fadeOutTimer += Time.deltaTime;
+            float alpha = Mathf.Lerp(1f, 0f, fadeOutTimer / fadeOutDuration);
+            Color color = spriteRenderer.color;
+            color.a = alpha;
+            spriteRenderer.color = color;
         }
     }
 
