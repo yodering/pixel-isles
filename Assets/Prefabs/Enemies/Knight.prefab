@@ -67,7 +67,7 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0.01201424, y: -0.08409956}
+  m_Offset: {x: 0.015354708, y: -0.08744013}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0, y: 0}
@@ -77,7 +77,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.59952575, y: 0.551469}
+  m_Size: {x: 0.5527587, y: 0.6182791}
   m_EdgeRadius: 0
 --- !u!114 &564735899869693870
 MonoBehaviour:
@@ -88,7 +88,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 123677734963879440}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2164e084db4dd4c56900886180f7b3f1, type: 3}
+  m_Script: {fileID: 11500000, guid: 116b09dbfda3e47478c8820144b91f5d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAttackHitbox
 --- !u!1 &6307851949880687561
@@ -330,6 +330,10 @@ MonoBehaviour:
   stoppingDistance: 1.5
   stuckCheckInterval: 0.5
   stuckThreshold: 0.1
+  obstacleDetectionDistance: 1
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 0
   attackRange: 1.5
   attackCooldown: 1.5
   attackDamage: 10

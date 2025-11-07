@@ -1,28 +1,22 @@
 using UnityEngine;
 
-/// <summary>
-/// Improved enemy AI that moves toward the player and attacks with proper animations
-/// Attacks are triggered via animation events for proper timing
-/// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Health))]
 public class EnemyController : MonoBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float moveSpeed = 1.3f; // Slower than player (player is 2.0)
-    [SerializeField] private float stoppingDistance = 1.5f; // How close before stopping
-    [SerializeField] private float stuckCheckInterval = 1.0f; // How often to check if stuck
-    [SerializeField] private float stuckThreshold = 0.05f; // Minimum movement to not be stuck
+    [SerializeField] private float moveSpeed = 1.3f;
+    [SerializeField] private float stuckCheckInterval = 0.3f;
+    [SerializeField] private float stuckThreshold = 0.02f;
+    [SerializeField] private float obstacleDetectionDistance = 1.0f;
+    [SerializeField] private LayerMask obstacleLayer;
 
     [Header("Attack")]
     [SerializeField] private float attackRange = 1.5f;
     [SerializeField] private float attackCooldown = 1.5f;
     [SerializeField] private float attackDamage = 10f;
-    
-    [Header("Attack Hitbox")]
-    [Tooltip("The collider used for melee attacks (should be a child object with trigger collider)")]
     [SerializeField] private Collider2D attackHitbox;
-    [SerializeField] private float hitboxActiveTime = 0.2f; // How long the hitbox stays active
+    [SerializeField] private float hitboxActiveTime = 0.2f;
 
     [Header("References")]
     private Transform player;
@@ -34,12 +28,13 @@ public class EnemyController : MonoBehaviour
     private float lastAngle = 0f;
     private bool isAttacking = false;
     private string currentAttackAnimationParam = null;
-    
-    // Stuck detection
     private Vector2 lastPosition;
     private float lastStuckCheck = 0f;
     private Vector2 unstuckDirection = Vector2.zero;
     private float unstuckTimer = 0f;
+    private int consecutiveStuckFrames = 0;
+    private const int maxStuckFrames = 3;
+    private Vector2 desiredVelocity = Vector2.zero;
 
     void Start()
     {
@@ -48,28 +43,14 @@ public class EnemyController : MonoBehaviour
         health = GetComponent<Health>();
         lastPosition = transform.position;
 
-        // Ensure player-only scripts are DESTROYED on enemies (not just disabled)
         PlayerController playerController = GetComponent<PlayerController>();
-        if (playerController != null)
-        {
-            Debug.Log($"{gameObject.name}: Removing PlayerController component");
-            Destroy(playerController);
-        }
+        if (playerController != null) Destroy(playerController);
 
         AnimationController animationController = GetComponent<AnimationController>();
-        if (animationController != null)
-        {
-˝            Debug.Log($"{gameObject.name}: Removing AnimationController component");
-            Destroy(animationController);
-        }
+        if (animationController != null) Destroy(animationController);
 
-        // Disable attack hitbox by default
-        if (attackHitbox != null)
-        {
-            attackHitbox.enabled = false;
-        }
+        if (attackHitbox != null) attackHitbox.enabled = false;
 
-        // Find the player
         GameObject playerObject = GameObject.FindGameObjectWithTag("Player1");
         if (playerObject != null)
         {
@@ -83,101 +64,74 @@ public class EnemyController : MonoBehaviour
 
     void Update()
     {
-        if (player == null || health.IsDead()) return;
+        if (player == null || health.IsDead())
+        {
+            desiredVelocity = Vector2.zero;
+            return;
+        }
 
         float distanceToPlayer = Vector2.Distance(transform.position, player.position);
-
-        // Calculate direction to player
         Vector2 desiredDirection = (player.position - transform.position).normalized;
+        Vector2 moveDirection = GetNavigationDirection(desiredDirection, distanceToPlayer);
 
-        // Update stuck detection state
-        UpdateStuckState(distanceToPlayer, desiredDirection);
+        UpdateStuckState(distanceToPlayer, moveDirection);
 
-        Vector2 moveDirection = unstuckTimer > 0f ? unstuckDirection : desiredDirection;
-        if (moveDirection.sqrMagnitude <= 0.0001f)
-        {
-            moveDirection = desiredDirection;
-        }
-        else
-        {
-            moveDirection = moveDirection.normalized;
-        }
+        if (unstuckTimer > 0f) moveDirection = unstuckDirection;
+        if (moveDirection.sqrMagnitude > 0.0001f) moveDirection = moveDirection.normalized;
 
         float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
         lastAngle = SnapAngleToEightDirections(angle);
-
-        // Update directional animations
         UpdateDirectionAnimations(lastAngle);
 
         bool playerInStrikeRange = IsPlayerWithinStrikeRange(distanceToPlayer);
-
-        // Check if attack hitbox is in range and cooldown is ready
         bool canAttack = playerInStrikeRange && Time.time >= lastAttackTime + attackCooldown;
 
-        // Check if in attack range
         if (canAttack && !isAttacking)
         {
-            // Stop moving
-            rb.linearVelocity = Vector2.zero;
+            desiredVelocity = Vector2.zero;
             StartAttack();
-
-            // Set idle animation (not running)
-            if (animator != null)
-            {
-                animator.SetBool("isRunning", false);
-            }
-        }
-        else if (distanceToPlayer > stoppingDistance && !isAttacking)
-        {
-            // Move toward player or use unstuck direction
-            Vector2 desiredVelocity = moveDirection.sqrMagnitude > 0.0001f ? moveDirection * moveSpeed : Vector2.zero;
-            rb.linearVelocity = desiredVelocity;
-
-            // Set running animation
-            if (animator != null)
-            {
-                animator.SetBool("isRunning", true);
-                animator.SetBool("isAttackAttacking", false);
-            }
+            if (animator != null) animator.SetBool("isRunning", false);
         }
         else if (!isAttacking)
         {
-            // Stop moving but don't attack (too far)
-            rb.linearVelocity = Vector2.zero;
-
-            if (animator != null)
+            desiredVelocity = moveDirection.sqrMagnitude > 0.0001f ? moveDirection * moveSpeed : Vector2.zero;
+        }
+        
+        if (animator != null && !isAttacking)
+        {
+            bool isActuallyMoving = desiredVelocity.magnitude > 0.1f;
+            animator.SetBool("isRunning", isActuallyMoving);
+            animator.SetBool("isAttackAttacking", false);
+            
+            if (isActuallyMoving)
             {
-                animator.SetBool("isRunning", false);
-                animator.SetBool("isAttackAttacking", false);
+                SetMovementAnimation(lastAngle);
+            }
+            else
+            {
+                ResetMovementAnimations();
             }
         }
     }
 
-    /// <summary>
-    /// Start the attack animation
-    /// </summary>
+    void FixedUpdate()
+    {
+        if (rb != null) rb.linearVelocity = desiredVelocity;
+    }
+
     private void StartAttack()
     {
         isAttacking = true;
         lastAttackTime = Time.time;
-
-        // Trigger attack animation
         if (animator != null)
         {
             animator.SetBool("isAttackAttacking", true);
             TriggerAttackAnimation();
         }
-
-        // Enable hitbox after a short delay (mid-attack animation)
         Invoke(nameof(EnableAttackHitbox), 0.3f);
-        
-        // Reset attack state after animation completes
         Invoke(nameof(EndAttack), 1.0f);
     }
 
-    /// <summary>
-    /// Enable the attack hitbox during attack animation
-    /// </summary>
     private void EnableAttackHitbox()
     {
         if (attackHitbox != null)
@@ -185,31 +139,17 @@ public class EnemyController : MonoBehaviour
             attackHitbox.enabled = true;
             Invoke(nameof(DisableAttackHitbox), hitboxActiveTime);
         }
-        else
-        {
-            // Fallback: direct damage if no hitbox is set up
-            DealDirectDamage();
-        }
+        else DealDirectDamage();
     }
 
-    /// <summary>
-    /// Disable the attack hitbox
-    /// </summary>
     private void DisableAttackHitbox()
     {
-        if (attackHitbox != null)
-        {
-            attackHitbox.enabled = false;
-        }
+        if (attackHitbox != null) attackHitbox.enabled = false;
     }
 
-    /// <summary>
-    /// End the attack state
-    /// </summary>
     private void EndAttack()
     {
         isAttacking = false;
-        
         if (animator != null)
         {
             animator.SetBool("isAttackAttacking", false);
@@ -217,15 +157,10 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Direct damage fallback (used when no hitbox collider is set up)
-    /// </summary>
     private void DealDirectDamage()
     {
         if (player == null) return;
-
         float distanceToPlayer = Vector2.Distance(transform.position, player.position);
-
         if (distanceToPlayer <= attackRange)
         {
             Health playerHealth = player.GetComponent<Health>();
@@ -237,9 +172,6 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Called when attack hitbox collides with player (requires hitbox setup)
-    /// </summary>
     public void OnAttackHitPlayer(Collider2D collision)
     {
         Health targetHealth = collision.GetComponent<Health>();
@@ -250,19 +182,12 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Snap angle to 8 cardinal directions (same as player)
-    /// </summary>
     private float SnapAngleToEightDirections(float angle)
     {
-        // Normalize angle to 0-360
         if (angle < 0) angle += 360;
-
-        // Snap to nearest 45-degree increment
         float[] directions = { 0, 45, 90, 135, 180, 225, 270, 315 };
         float closestAngle = 0;
         float minDifference = 360;
-
         foreach (float dir in directions)
         {
             float difference = Mathf.Abs(Mathf.DeltaAngle(angle, dir));
@@ -272,18 +197,12 @@ public class EnemyController : MonoBehaviour
                 closestAngle = dir;
             }
         }
-
         return closestAngle;
     }
 
-    /// <summary>
-    /// Update animator direction booleans
-    /// </summary>
     private void UpdateDirectionAnimations(float angle)
     {
         if (animator == null) return;
-
-        // Reset all directions
         animator.SetBool("isNorth", false);
         animator.SetBool("isSouth", false);
         animator.SetBool("isEast", false);
@@ -292,8 +211,6 @@ public class EnemyController : MonoBehaviour
         animator.SetBool("isNorthWest", false);
         animator.SetBool("isSouthEast", false);
         animator.SetBool("isSouthWest", false);
-
-        // Set appropriate direction
         if (angle == 0) animator.SetBool("isEast", true);
         else if (angle == 45) animator.SetBool("isNorthEast", true);
         else if (angle == 90) animator.SetBool("isNorth", true);
@@ -304,29 +221,40 @@ public class EnemyController : MonoBehaviour
         else if (angle == 315) animator.SetBool("isSouthEast", true);
     }
 
+    private void SetMovementAnimation(float angle)
+    {
+        if (animator == null) return;
+        string direction = GetDirectionNameForAngle(angle);
+        string animationKey = "Move" + direction;
+        ResetMovementAnimations();
+        animator.SetBool(animationKey, true);
+    }
+
+    private void ResetMovementAnimations()
+    {
+        if (animator == null) return;
+        string[] directions = new string[] { "North", "South", "East", "West", "NorthEast", "NorthWest", "SouthEast", "SouthWest" };
+        foreach (string direction in directions) animator.SetBool("Move" + direction, false);
+    }
+
     private void TriggerAttackAnimation()
     {
         if (animator == null) return;
-
         ResetAttackAnimationFlags();
-
         string direction = GetDirectionNameForAngle(lastAngle);
         string attackBase = Random.value < 0.5f ? "AttackAttack" : "Attack2";
         currentAttackAnimationParam = attackBase + direction;
-
         animator.SetBool(currentAttackAnimationParam, true);
     }
 
     private void ResetAttackAnimationFlags()
     {
         if (animator == null) return;
-
         if (!string.IsNullOrEmpty(currentAttackAnimationParam))
         {
             animator.SetBool(currentAttackAnimationParam, false);
             currentAttackAnimationParam = null;
         }
-
         animator.SetBool("isAttackRunning", false);
     }
 
@@ -348,53 +276,50 @@ public class EnemyController : MonoBehaviour
 
     private bool IsPlayerWithinStrikeRange(float fallbackDistance)
     {
-        if (player == null)
-        {
-            return false;
-        }
-
-        if (attackHitbox == null)
-        {
-            return fallbackDistance <= attackRange * 0.5f;
-        }
-
+        if (player == null) return false;
+        if (attackHitbox == null) return fallbackDistance <= attackRange * 0.5f;
         float reach = GetHitboxReach();
         float centerDistance = Vector2.Distance(attackHitbox.transform.position, player.position);
-
         return centerDistance <= reach + 0.05f;
     }
 
     private float GetHitboxReach()
     {
-        if (attackHitbox == null)
-        {
-            return attackRange;
-        }
-
+        if (attackHitbox == null) return attackRange;
         float reach = attackRange;
-
         if (attackHitbox is BoxCollider2D box)
         {
             Vector2 scaledSize = new Vector2(box.size.x * Mathf.Abs(box.transform.lossyScale.x), box.size.y * Mathf.Abs(box.transform.lossyScale.y));
             reach = scaledSize.magnitude * 0.5f;
         }
-        else
-        {
-            reach = attackHitbox.bounds.extents.magnitude;
-        }
-
+        else reach = attackHitbox.bounds.extents.magnitude;
         return reach;
     }
 
-    private void UpdateStuckState(float distanceToPlayer, Vector2 desiredDirection)
+    private Vector2 GetNavigationDirection(Vector2 desiredDirection, float distanceToPlayer)
+    {
+        RaycastHit2D directHit = Physics2D.Raycast(transform.position, desiredDirection, obstacleDetectionDistance, obstacleLayer);
+        if (directHit.collider == null) return desiredDirection;
+        float[] angleOffsets = { 45f, -45f, 90f, -90f, 135f, -135f };
+        foreach (float offset in angleOffsets)
+        {
+            float angleRad = Mathf.Atan2(desiredDirection.y, desiredDirection.x) + (offset * Mathf.Deg2Rad);
+            Vector2 testDirection = new Vector2(Mathf.Cos(angleRad), Mathf.Sin(angleRad));
+            RaycastHit2D testHit = Physics2D.Raycast(transform.position, testDirection, obstacleDetectionDistance, obstacleLayer);
+            if (testHit.collider == null) return testDirection;
+        }
+        return desiredDirection;
+    }
+
+    private void UpdateStuckState(float distanceToPlayer, Vector2 moveDirection)
     {
         if (isAttacking)
         {
             lastPosition = transform.position;
             lastStuckCheck = Time.time;
+            consecutiveStuckFrames = 0;
             return;
         }
-
         if (unstuckTimer > 0f)
         {
             unstuckTimer -= Time.deltaTime;
@@ -402,45 +327,57 @@ public class EnemyController : MonoBehaviour
             {
                 unstuckTimer = 0f;
                 unstuckDirection = Vector2.zero;
+                consecutiveStuckFrames = 0;
             }
         }
-
-        if (Time.time < lastStuckCheck + stuckCheckInterval)
-        {
-            return;
-        }
+        if (Time.time < lastStuckCheck + stuckCheckInterval) return;
 
         Vector2 currentPosition = transform.position;
         float movedDistance = Vector2.Distance(currentPosition, lastPosition);
+        bool tryingToMove = desiredVelocity.magnitude > 0.1f;
 
-        // Only trigger unstuck if we're truly stuck (trying to move but not moving much)
-        if (movedDistance < stuckThreshold && distanceToPlayer > stoppingDistance + 0.5f)
+        if (movedDistance < stuckThreshold && tryingToMove)
         {
-            // Try to move perpendicular to desired direction
-            Vector2 perpendicular = new Vector2(-desiredDirection.y, desiredDirection.x);
-            
-            if (Random.value > 0.5f)
+            consecutiveStuckFrames++;
+            if (consecutiveStuckFrames >= maxStuckFrames)
             {
-                perpendicular = -perpendicular;
+                Vector2[] escapeDirections = new Vector2[]
+                {
+                    new Vector2(-moveDirection.y, moveDirection.x),
+                    new Vector2(moveDirection.y, -moveDirection.x),
+                    -moveDirection,
+                    Random.insideUnitCircle.normalized
+                };
+                foreach (Vector2 escapeDir in escapeDirections)
+                {
+                    RaycastHit2D escapeCheck = Physics2D.Raycast(transform.position, escapeDir, obstacleDetectionDistance * 0.5f, obstacleLayer);
+                    if (escapeCheck.collider == null)
+                    {
+                        unstuckDirection = escapeDir.normalized;
+                        unstuckTimer = 0.4f;
+                        consecutiveStuckFrames = 0;
+                        Debug.Log($"{gameObject.name} detected stuck, escaping");
+                        break;
+                    }
+                }
             }
-
-            unstuckDirection = perpendicular.normalized;
-            unstuckTimer = 0.5f; // Shorter unstuck duration
-            
-            Debug.Log($"{gameObject.name} detected stuck, trying perpendicular movement");
         }
+        else consecutiveStuckFrames = 0;
 
         lastPosition = currentPosition;
         lastStuckCheck = Time.time;
     }
 
-    // Visualize attack range in editor
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
 
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, stoppingDistance);
+        if (player != null)
+        {
+            Vector2 directionToPlayer = (player.position - transform.position).normalized;
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawRay(transform.position, directionToPlayer * obstacleDetectionDistance);
+        }
     }
 }

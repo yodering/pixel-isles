@@ -66,7 +66,7 @@ public class SetupEnemiesInScene : EditorWindow
         foreach (string enemyName in enemyNames)
         {
             // Find ALL GameObjects with this name
-            GameObject[] allObjects = GameObject.FindObjectsOfType<GameObject>();
+            GameObject[] allObjects = GameObject.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
             bool foundOne = false;
 
             foreach (GameObject obj in allObjects)

@@ -12,11 +12,9 @@ public class TestSpawner : MonoBehaviour
     [SerializeField] private int maxEnemies = 5;
     
     [Header("Spawn Areas")]
-    [Tooltip("Assign BoxCollider2D objects marked as triggers that define spawn areas")]
     [SerializeField] private BoxCollider2D[] spawnAreas;
     
     [Header("Auto-Find Spawn Areas")]
-    [Tooltip("If true, automatically finds all GameObjects with 'spawn' in their name")]
     [SerializeField] private bool autoFindSpawnAreas = true;
 
     [Header("References")]

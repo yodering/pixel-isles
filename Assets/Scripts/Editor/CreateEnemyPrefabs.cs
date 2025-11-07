@@ -64,7 +64,7 @@ public class CreateEnemyPrefabs : EditorWindow
         foreach (string enemyName in enemyNames)
         {
             // Find the GameObject in the scene with components
-            GameObject[] allObjects = GameObject.FindObjectsOfType<GameObject>();
+             GameObject[] allObjects = GameObject.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
             GameObject sourceObj = null;
 
             foreach (GameObject obj in allObjects)
