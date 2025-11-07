@@ -107,6 +107,8 @@ GameObject:
   - component: {fileID: 9120648919596650555}
   - component: {fileID: 1945512412434585687}
   - component: {fileID: 6068312650712683653}
+  - component: {fileID: -996186668593575486}
+  - component: {fileID: 8286255312183032159}
   m_Layer: 7
   m_Name: Knight
   m_TagString: Enemy
@@ -327,7 +329,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   moveSpeed: 1.5
-  stoppingDistance: 1.5
   stuckCheckInterval: 0.5
   stuckThreshold: 0.1
   obstacleDetectionDistance: 1
@@ -339,3 +340,45 @@ MonoBehaviour:
   attackDamage: 10
   attackHitbox: {fileID: 1055216577758499324}
   hitboxActiveTime: 0.2
+--- !u!114 &-996186668593575486
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6307851949880687561}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd08afa74039a47b19335553a8303d75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHealthBar
+  healthBarPrefab: {fileID: 0}
+  healthBarOffset: {x: 0, y: 0.32, z: 0}
+  fullHealthColor: {r: 0, g: 1, b: 0, a: 1}
+  mediumHealthColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lowHealthColor: {r: 1, g: 0, b: 0, a: 1}
+  mediumHealthThreshold: 0.6
+  lowHealthThreshold: 0.3
+--- !u!114 &8286255312183032159
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6307851949880687561}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab4b553a7cba74faeba5a4b879614125, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HitIndicator
+  damageNumberPrefab: {fileID: 0}
+  damageNumberOffset: {x: 0, y: 1, z: 0}
+  damageNumberColor: {r: 1, g: 0, b: 0, a: 1}
+  damageNumberDuration: 1
+  damageNumberSpeed: 2
+  spriteRenderer: {fileID: 0}
+  hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hitFlashDuration: 0.1
+  enableScreenShake: 1
+  screenShakeIntensity: 0.1
+  screenShakeDuration: 0.1

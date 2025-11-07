@@ -17,6 +17,8 @@ GameObject:
   - component: {fileID: 6643767517854540602}
   - component: {fileID: 3362917090139732020}
   - component: {fileID: 6994329966036665184}
+  - component: {fileID: -3591477028635371450}
+  - component: {fileID: 7417392175139167337}
   m_Layer: 7
   m_Name: Mage
   m_TagString: Enemy
@@ -54,6 +56,7 @@ MonoBehaviour:
   currentDirection: isEast
   isCurrentlyRunning: 0
   isCrouching: 0
+  attackHitbox: {fileID: 0}
   isRunning: 0
   isRunningBackwards: 0
   isStrafingLeft: 0
@@ -235,10 +238,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   moveSpeed: 1.5
-  stoppingDistance: 1.5
+  stuckCheckInterval: 0.3
+  stuckThreshold: 0.02
+  obstacleDetectionDistance: 1
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 0
   attackRange: 1.5
   attackCooldown: 1.5
   attackDamage: 10
+  attackHitbox: {fileID: 0}
+  hitboxActiveTime: 0.2
 --- !u!114 &6994329966036665184
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -252,7 +262,56 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   moveSpeed: 1.5
-  stoppingDistance: 1.5
+  stuckCheckInterval: 0.3
+  stuckThreshold: 0.02
+  obstacleDetectionDistance: 1
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 0
   attackRange: 1.5
   attackCooldown: 1.5
   attackDamage: 10
+  attackHitbox: {fileID: 0}
+  hitboxActiveTime: 0.2
+--- !u!114 &-3591477028635371450
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6729839446933624504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd08afa74039a47b19335553a8303d75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHealthBar
+  healthBarPrefab: {fileID: 0}
+  healthBarOffset: {x: 0, y: 0.32, z: 0}
+  fullHealthColor: {r: 0, g: 1, b: 0, a: 1}
+  mediumHealthColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  lowHealthColor: {r: 1, g: 0, b: 0, a: 1}
+  mediumHealthThreshold: 0.6
+  lowHealthThreshold: 0.3
+--- !u!114 &7417392175139167337
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6729839446933624504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab4b553a7cba74faeba5a4b879614125, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HitIndicator
+  damageNumberPrefab: {fileID: 0}
+  damageNumberOffset: {x: 0, y: 1, z: 0}
+  damageNumberColor: {r: 1, g: 0, b: 0, a: 1}
+  damageNumberDuration: 1
+  damageNumberSpeed: 2
+  spriteRenderer: {fileID: 0}
+  hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hitFlashDuration: 0.1
+  enableScreenShake: 1
+  screenShakeIntensity: 0.1
+  screenShakeDuration: 0.1
