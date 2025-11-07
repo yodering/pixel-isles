@@ -96,8 +96,9 @@ public class HitIndicator : MonoBehaviour
             textMesh.color = damageNumberColor;
         }
 
-        // Animate and destroy
-        StartCoroutine(AnimateDamageNumber(damageNumber));
+        // Add independent animator component to the damage number itself
+        DamageNumberAnimator animator = damageNumber.AddComponent<DamageNumberAnimator>();
+        animator.Initialize(damageNumberDuration, damageNumberSpeed);
     }
 
     void CreateFloatingText(string text)
@@ -121,46 +122,11 @@ public class HitIndicator : MonoBehaviour
             meshRenderer.sortingOrder = 100;
         }
 
-        StartCoroutine(AnimateDamageNumber(floatingText));
+        // Add independent animator component to the damage number itself
+        DamageNumberAnimator animator = floatingText.AddComponent<DamageNumberAnimator>();
+        animator.Initialize(damageNumberDuration, damageNumberSpeed);
     }
 
-    System.Collections.IEnumerator AnimateDamageNumber(GameObject damageNumber)
-    {
-        float elapsed = 0f;
-        Vector3 startPos = damageNumber.transform.position;
-        TextMesh textMesh = damageNumber.GetComponent<TextMesh>();
-
-        while (elapsed < damageNumberDuration)
-        {
-            elapsed += Time.deltaTime;
-            float progress = elapsed / damageNumberDuration;
-
-            // Move upward
-            damageNumber.transform.position = startPos + Vector3.up * (damageNumberSpeed * elapsed);
-
-            // Fade out
-            if (textMesh != null)
-            {
-                Color color = textMesh.color;
-                color.a = 1f - progress;
-                textMesh.color = color;
-            }
-
-            // Scale up slightly then down
-            float scale = 1f + Mathf.Sin(progress * Mathf.PI) * 0.3f;
-            damageNumber.transform.localScale = Vector3.one * scale;
-
-            // Face camera
-            if (Camera.main != null)
-            {
-                damageNumber.transform.rotation = Camera.main.transform.rotation;
-            }
-
-            yield return null;
-        }
-
-        Destroy(damageNumber);
-    }
 
     System.Collections.IEnumerator HitFlash()
     {
