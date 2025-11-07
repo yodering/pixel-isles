@@ -54,6 +54,17 @@ public class EnemyHealthBar : MonoBehaviour
         {
             Debug.Log($"Health bar world position: {healthBarInstance.transform.position}, local position: {healthBarInstance.transform.localPosition}");
         }
+
+        // Force initial update in next frame to ensure all components are ready
+        Invoke(nameof(ForceInitialUpdate), 0.1f);
+    }
+
+    void ForceInitialUpdate()
+    {
+        if (health != null)
+        {
+            UpdateHealthBar(health.GetCurrentHealth());
+        }
     }
 
     void CreateHealthBar()
@@ -74,6 +85,37 @@ public class EnemyHealthBar : MonoBehaviour
             if (healthSlider != null)
             {
                 fillImage = healthSlider.fillRect?.GetComponent<Image>();
+                // Set initial slider value to full
+                healthSlider.value = 1f;
+
+                Debug.Log($"{gameObject.name}: Found slider, fillImage is {(fillImage != null ? "valid" : "null")}");
+            }
+
+            // Try to find fill image if slider approach didn't work
+            if (fillImage == null)
+            {
+                // Search for any Image component with "Fill" in the name
+                Image[] images = healthBarInstance.GetComponentsInChildren<Image>();
+                foreach (Image img in images)
+                {
+                    if (img.gameObject.name.Contains("Fill") || img.type == Image.Type.Filled)
+                    {
+                        fillImage = img;
+                        Debug.Log($"{gameObject.name}: Found fill image via search: {img.gameObject.name}");
+                        break;
+                    }
+                }
+            }
+
+            // Set initial fill color to green
+            if (fillImage != null)
+            {
+                fillImage.color = fullHealthColor;
+                Debug.Log($"{gameObject.name}: Set initial fill color to {fullHealthColor}");
+            }
+            else
+            {
+                Debug.LogWarning($"{gameObject.name}: Could not find fillImage!");
             }
         }
 
