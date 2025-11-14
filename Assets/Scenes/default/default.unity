@@ -681,7 +681,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0.008559704, z: 10}
-  m_LocalScale: {x: 0.87858135, y: 0.66747165, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 10213671}
@@ -1417,7 +1417,7 @@ MonoBehaviour:
     - enemyPrefab: {fileID: 3212733181979253375, guid: 9e03c397ccfad4a2898f9fd4c3a2ca26, type: 3}
       count: 2
       spawnInterval: 0.7
-    delayBeforeWave: 2
+    delayBeforeWave: 4
   autoStartFirstWave: 1
   loopWaves: 0
   spawnAreas: []
