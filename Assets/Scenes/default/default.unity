@@ -1408,8 +1408,20 @@ MonoBehaviour:
     - enemyPrefab: {fileID: 3212733181979253375, guid: 9e03c397ccfad4a2898f9fd4c3a2ca26, type: 3}
       count: 1
       spawnInterval: 0.7
+    - enemyPrefab: {fileID: 6729839446933624504, guid: 024466d3d0be7428eb8c9b6ef6c14c61, type: 3}
+      count: 1
+      spawnInterval: 0.7
     delayBeforeWave: 2
   - waveName: Wave_2
+    enemies:
+    - enemyPrefab: {fileID: 6307851949880687561, guid: 362415825b6f14a09a795fa06844859d, type: 3}
+      count: 3
+      spawnInterval: 0.5
+    - enemyPrefab: {fileID: 3212733181979253375, guid: 9e03c397ccfad4a2898f9fd4c3a2ca26, type: 3}
+      count: 2
+      spawnInterval: 0.7
+    delayBeforeWave: 4
+  - waveName: Wave_3
     enemies:
     - enemyPrefab: {fileID: 6307851949880687561, guid: 362415825b6f14a09a795fa06844859d, type: 3}
       count: 3
@@ -3061,11 +3073,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 14d73210ef833024bb44ad7c5ddc4638, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   speed: 2
   isCrouching: 0
-  isRanged: 0
+  isRanged: 1
   isStealth: 1
   projectilePrefab: {fileID: 7602014574353706917, guid: 49a7ece029b621745910929da66dc10b, type: 3}
   AoEPrefab: {fileID: 2291971170736607146, guid: 4f9c246f468473648bc72340dccc6807, type: 3}
