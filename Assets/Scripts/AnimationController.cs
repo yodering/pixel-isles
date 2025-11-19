@@ -231,8 +231,8 @@ public class AnimationController : MonoBehaviour
 
         void HandleAttackAttack()
         {
-            // Check if the left mouse button is currently being held down
-            if (Input.GetMouseButton(1))
+            // Check if the right mouse button OR E key is being held down
+            if (Input.GetMouseButton(1) || Input.GetKey(KeyCode.E))
             {
                 bool isRunning = isCurrentlyRunning;
                 // Determine the current direction and trigger the appropriate attack attack or attack run attack
@@ -253,8 +253,8 @@ public class AnimationController : MonoBehaviour
                 else if (animator.GetBool("isSouthWest"))
                     TriggerAttack(isRunning, "SouthWest");
             }
-            // Check if the left mouse button was released
-            else if (Input.GetMouseButtonUp(1))
+            // Check if the right mouse button OR E key was released
+            else if (Input.GetMouseButtonUp(1) || Input.GetKeyUp(KeyCode.E))
             {
                 // Reset attack attack parameters and return to idle state
                 ResetAttackAttackParameters();
