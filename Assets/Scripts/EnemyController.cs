@@ -11,6 +11,10 @@ public class EnemyController : MonoBehaviour
     [SerializeField] private float obstacleDetectionDistance = 1.0f;
     [SerializeField] private LayerMask obstacleLayer;
 
+    [Header("Advanced Pathfinding")]
+    [SerializeField] private int raycastDirections = 16; // Number of directions to check for obstacles
+    [SerializeField] private float wallAvoidanceWeight = 2.0f; // How strongly to avoid walls
+
     [Header("Attack")]
     [SerializeField] private float attackRange = 1.5f;
     [SerializeField] private float attackCooldown = 1.5f;
@@ -298,17 +302,71 @@ public class EnemyController : MonoBehaviour
 
     private Vector2 GetNavigationDirection(Vector2 desiredDirection, float distanceToPlayer)
     {
-        RaycastHit2D directHit = Physics2D.Raycast(transform.position, desiredDirection, obstacleDetectionDistance, obstacleLayer);
-        if (directHit.collider == null) return desiredDirection;
-        float[] angleOffsets = { 45f, -45f, 90f, -90f, 135f, -135f };
-        foreach (float offset in angleOffsets)
+        // Multi-directional obstacle detection with weighted vector field approach
+        Vector2 finalDirection = Vector2.zero;
+        float totalWeight = 0f;
+
+        // Cast rays in multiple directions to build a complete view of obstacles
+        for (int i = 0; i < raycastDirections; i++)
         {
-            float angleRad = Mathf.Atan2(desiredDirection.y, desiredDirection.x) + (offset * Mathf.Deg2Rad);
-            Vector2 testDirection = new Vector2(Mathf.Cos(angleRad), Mathf.Sin(angleRad));
-            RaycastHit2D testHit = Physics2D.Raycast(transform.position, testDirection, obstacleDetectionDistance, obstacleLayer);
-            if (testHit.collider == null) return testDirection;
+            float angle = (360f / raycastDirections) * i;
+            float angleRad = angle * Mathf.Deg2Rad;
+            Vector2 rayDirection = new Vector2(Mathf.Cos(angleRad), Mathf.Sin(angleRad));
+
+            // Cast ray to detect obstacles
+            RaycastHit2D hit = Physics2D.Raycast(transform.position, rayDirection, obstacleDetectionDistance, obstacleLayer);
+
+            float weight = 0f;
+
+            if (hit.collider == null)
+            {
+                // No obstacle - direction is safe
+                // Weight by alignment with desired direction
+                float alignment = Vector2.Dot(rayDirection, desiredDirection);
+                weight = Mathf.Max(0, alignment); // Only positive alignment
+
+                // Increase weight if aligned with desired direction
+                if (alignment > 0.5f)
+                {
+                    weight *= 1.5f;
+                }
+            }
+            else
+            {
+                // Obstacle detected - penalize this direction based on distance
+                float distanceRatio = hit.distance / obstacleDetectionDistance;
+
+                // Apply strong negative weight for nearby obstacles
+                float obstacleAlignment = Vector2.Dot(rayDirection, desiredDirection);
+                if (obstacleAlignment > 0)
+                {
+                    // Obstacle is in our desired direction - strongly avoid
+                    weight = -wallAvoidanceWeight * (1f - distanceRatio);
+                }
+                else
+                {
+                    // Obstacle is not in desired direction - less critical
+                    weight = -0.5f * wallAvoidanceWeight * (1f - distanceRatio);
+                }
+            }
+
+            // Accumulate weighted direction
+            finalDirection += rayDirection * weight;
+            totalWeight += Mathf.Abs(weight);
         }
-        return desiredDirection;
+
+        // Normalize the final direction
+        if (totalWeight > 0.01f && finalDirection.sqrMagnitude > 0.01f)
+        {
+            finalDirection = finalDirection.normalized;
+        }
+        else
+        {
+            // Fallback to desired direction if no clear path
+            finalDirection = desiredDirection;
+        }
+
+        return finalDirection;
     }
 
     private void UpdateStuckState(float distanceToPlayer, Vector2 moveDirection)
