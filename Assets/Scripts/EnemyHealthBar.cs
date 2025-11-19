@@ -140,7 +140,7 @@ public class EnemyHealthBar : MonoBehaviour
 
         // Scale the canvas properly - use tiny values
         RectTransform canvasRect = healthBarInstance.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = new Vector2(1f, 0.1f); // Much smaller actual size
+        canvasRect.sizeDelta = new Vector2(0.6f, 0.08f); // Reduced size (was 1f x 0.1f)
         canvasRect.localScale = Vector3.one; // No additional scaling
 
         // Create background
