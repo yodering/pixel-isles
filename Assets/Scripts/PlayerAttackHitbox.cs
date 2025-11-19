@@ -9,8 +9,13 @@ public class PlayerAttackHitbox : MonoBehaviour
 {
     [Header("Attack Settings")]
     [SerializeField] private float attackDamage = 15f;
-    
+
+    [Header("Vampirism Settings")]
+    [Tooltip("Percentage of damage dealt that is converted to health (0-1). 0.2 = 20% life steal")]
+    [SerializeField] private float lifeStealPercentage = 0.2f;
+
     private Collider2D hitboxCollider;
+    private Health playerHealth;
 
     void Start()
     {
@@ -20,6 +25,13 @@ public class PlayerAttackHitbox : MonoBehaviour
         {
             hitboxCollider.isTrigger = true;
             hitboxCollider.enabled = false; // Disabled by default, enabled during attacks
+        }
+
+        // Find player's health component
+        GameObject player = GameObject.FindGameObjectWithTag("Player1");
+        if (player != null)
+        {
+            playerHealth = player.GetComponent<Health>();
         }
     }
 
@@ -47,7 +59,7 @@ public class PlayerAttackHitbox : MonoBehaviour
     }
 
     /// <summary>
-    /// When the hitbox collides with an enemy, deal damage
+    /// When the hitbox collides with an enemy, deal damage and restore health (vampirism)
     /// </summary>
     private void OnTriggerEnter2D(Collider2D collision)
     {
@@ -58,6 +70,14 @@ public class PlayerAttackHitbox : MonoBehaviour
             {
                 enemyHealth.TakeDamage(attackDamage);
                 Debug.Log($"Player hit {collision.gameObject.name} for {attackDamage} damage!");
+
+                // Vampirism: Restore health based on damage dealt
+                if (playerHealth != null && lifeStealPercentage > 0)
+                {
+                    float healAmount = attackDamage * lifeStealPercentage;
+                    playerHealth.Heal(healAmount);
+                    Debug.Log($"Life steal: Restored {healAmount} health ({lifeStealPercentage * 100}% of damage)");
+                }
             }
         }
     }
