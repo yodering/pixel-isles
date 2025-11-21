@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Health))]
@@ -14,6 +15,9 @@ public class EnemyController : MonoBehaviour
     [Header("Advanced Pathfinding")]
     [SerializeField] private int raycastDirections = 16; // Number of directions to check for obstacles
     [SerializeField] private float wallAvoidanceWeight = 2.0f; // How strongly to avoid walls
+    [SerializeField] private bool useAStarPathfinding = true; // Enable A* pathfinding for complex navigation
+    [SerializeField] private float pathfindingDistance = 5.0f; // Use A* when player is farther than this
+    [SerializeField] private float waypointReachedDistance = 0.5f; // Distance to consider waypoint reached
 
     [Header("Attack")]
     [SerializeField] private float attackRange = 1.5f;
@@ -39,6 +43,11 @@ public class EnemyController : MonoBehaviour
     private int consecutiveStuckFrames = 0;
     private const int maxStuckFrames = 3;
     private Vector2 desiredVelocity = Vector2.zero;
+
+    // A* Pathfinding variables
+    private List<Vector3> currentPath;
+    private int currentWaypointIndex = 0;
+    private float lastPathUpdateTime = 0f;
 
     void Start()
     {
@@ -76,7 +85,17 @@ public class EnemyController : MonoBehaviour
 
         float distanceToPlayer = Vector2.Distance(transform.position, player.position);
         Vector2 desiredDirection = (player.position - transform.position).normalized;
-        Vector2 moveDirection = GetNavigationDirection(desiredDirection, distanceToPlayer);
+
+        // Determine navigation direction based on distance and pathfinding availability
+        Vector2 moveDirection;
+        if (useAStarPathfinding && distanceToPlayer > pathfindingDistance && AStarPathfinding.Instance != null)
+        {
+            moveDirection = GetPathfindingDirection(distanceToPlayer);
+        }
+        else
+        {
+            moveDirection = GetNavigationDirection(desiredDirection, distanceToPlayer);
+        }
 
         UpdateStuckState(distanceToPlayer, moveDirection);
 
@@ -426,16 +445,127 @@ public class EnemyController : MonoBehaviour
         lastStuckCheck = Time.time;
     }
 
-    private void OnDrawGizmosSelected()
+    private Vector2 GetPathfindingDirection(float distanceToPlayer)
     {
-        Gizmos.color = Color.red;
+        if (AStarPathfinding.Instance == null)
+        {
+            return (player.position - transform.position).normalized;
+        }
+
+        // Update path periodically
+        float pathUpdateInterval = AStarPathfinding.Instance.GetPathUpdateInterval();
+        if (currentPath == null || Time.time >= lastPathUpdateTime + pathUpdateInterval)
+        {
+            currentPath = AStarPathfinding.Instance.FindPath(transform.position, player.position);
+            currentWaypointIndex = 0;
+            lastPathUpdateTime = Time.time;
+
+            // If no path found, fall back to direct navigation
+            if (currentPath == null || currentPath.Count == 0)
+            {
+                Vector2 desiredDirection = (player.position - transform.position).normalized;
+                return GetNavigationDirection(desiredDirection, distanceToPlayer);
+            }
+        }
+
+        // Follow the path
+        if (currentPath != null && currentPath.Count > 0)
+        {
+            // Check if we've reached the current waypoint
+            if (currentWaypointIndex < currentPath.Count)
+            {
+                Vector3 currentWaypoint = currentPath[currentWaypointIndex];
+                float distanceToWaypoint = Vector2.Distance(transform.position, currentWaypoint);
+
+                if (distanceToWaypoint < waypointReachedDistance)
+                {
+                    currentWaypointIndex++;
+                }
+
+                // If we still have waypoints, move towards the current one
+                if (currentWaypointIndex < currentPath.Count)
+                {
+                    Vector2 directionToWaypoint = (currentPath[currentWaypointIndex] - transform.position).normalized;
+
+                    // Use local obstacle avoidance to smooth the path
+                    return GetNavigationDirection(directionToWaypoint, distanceToPlayer);
+                }
+            }
+        }
+
+        // Fallback to direct navigation if path is complete or invalid
+        Vector2 fallbackDirection = (player.position - transform.position).normalized;
+        return GetNavigationDirection(fallbackDirection, distanceToPlayer);
+    }
+
+    private void OnDrawGizmos()
+    {
+        // Draw attack range
+        Gizmos.color = new Color(1, 0, 0, 0.3f);
         Gizmos.DrawWireSphere(transform.position, attackRange);
 
         if (player != null)
         {
-            Vector2 directionToPlayer = (player.position - transform.position).normalized;
+            // Draw direct line to player
+            Gizmos.color = new Color(1, 1, 0, 0.5f);
+            Gizmos.DrawLine(transform.position, player.position);
+
+            // Draw multi-directional raycasts for obstacle detection
+            for (int i = 0; i < raycastDirections; i++)
+            {
+                float angle = (360f / raycastDirections) * i;
+                float angleRad = angle * Mathf.Deg2Rad;
+                Vector2 rayDirection = new Vector2(Mathf.Cos(angleRad), Mathf.Sin(angleRad));
+
+                RaycastHit2D hit = Physics2D.Raycast(transform.position, rayDirection, obstacleDetectionDistance, obstacleLayer);
+
+                if (hit.collider == null)
+                {
+                    // Green for clear paths
+                    Gizmos.color = new Color(0, 1, 0, 0.2f);
+                    Gizmos.DrawRay(transform.position, rayDirection * obstacleDetectionDistance);
+                }
+                else
+                {
+                    // Red for blocked paths
+                    Gizmos.color = new Color(1, 0, 0, 0.5f);
+                    Gizmos.DrawRay(transform.position, rayDirection * hit.distance);
+                    Gizmos.DrawWireSphere(hit.point, 0.1f);
+                }
+            }
+
+            // Draw current movement direction
+            if (desiredVelocity.magnitude > 0.1f)
+            {
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawRay(transform.position, desiredVelocity.normalized * obstacleDetectionDistance);
+            }
+        }
+
+        // Draw current A* path
+        if (currentPath != null && currentPath.Count > 0)
+        {
             Gizmos.color = Color.cyan;
-            Gizmos.DrawRay(transform.position, directionToPlayer * obstacleDetectionDistance);
+            for (int i = 0; i < currentPath.Count - 1; i++)
+            {
+                Gizmos.DrawLine(currentPath[i], currentPath[i + 1]);
+                Gizmos.DrawWireSphere(currentPath[i], 0.15f);
+            }
+
+            // Highlight current waypoint in yellow
+            if (currentWaypointIndex < currentPath.Count)
+            {
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawWireSphere(currentPath[currentWaypointIndex], 0.25f);
+                Gizmos.DrawLine(transform.position, currentPath[currentWaypointIndex]);
+            }
+        }
+
+        // Draw unstuck direction if active
+        if (unstuckTimer > 0f)
+        {
+            Gizmos.color = new Color(1, 0.5f, 0, 1f); // Orange
+            Gizmos.DrawRay(transform.position, unstuckDirection * obstacleDetectionDistance);
         }
     }
 }

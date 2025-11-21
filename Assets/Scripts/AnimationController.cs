@@ -11,6 +11,19 @@ public class AnimationController : MonoBehaviour
         
         [Header("Attack Hitbox")]
         [SerializeField] private PlayerAttackHitbox attackHitbox;
+        
+        [Header("Attack Cooldowns")]
+        [SerializeField] private float basicAttackCooldown = 0.5f; // Cooldown for E key / right mouse button attacks
+        [SerializeField] private float specialAbilityCooldown = 1.0f; // Cooldown for special abilities (Alpha1-6)
+        
+        private float lastBasicAttackTime = 0f;
+        private float lastSpecialAbility1Time = 0f;
+        private float lastSpecialAbility2Time = 0f;
+        private float lastCastSpellTime = 0f;
+        private float lastKickTime = 0f;
+        private float lastPummelTime = 0f;
+        private float lastAttackSpinTime = 0f;
+        private bool isAttacking = false; // Track if currently performing basic attack
 
         void Start()
         {
@@ -47,28 +60,34 @@ public class AnimationController : MonoBehaviour
                     ResetCrouchIdleParameters();
                 }
             }
-            else if (Input.GetKey(KeyCode.Alpha1))
+            else if (Input.GetKeyDown(KeyCode.Alpha1) && Time.time >= lastSpecialAbility1Time + specialAbilityCooldown)
             {
+                lastSpecialAbility1Time = Time.time;
                 TriggerSpecialAbility1Animation();
             }
-            else if (Input.GetKey(KeyCode.Alpha2))
+            else if (Input.GetKeyDown(KeyCode.Alpha2) && Time.time >= lastSpecialAbility2Time + specialAbilityCooldown)
             {
+                lastSpecialAbility2Time = Time.time;
                 TriggerSpecialAbility2Animation();
             }
-            else if (Input.GetKey(KeyCode.Alpha3))
+            else if (Input.GetKeyDown(KeyCode.Alpha3) && Time.time >= lastCastSpellTime + specialAbilityCooldown)
             {
+                lastCastSpellTime = Time.time;
                 TriggerCastSpellAnimation();
             }
-            else if (Input.GetKey(KeyCode.Alpha4))
+            else if (Input.GetKeyDown(KeyCode.Alpha4) && Time.time >= lastKickTime + specialAbilityCooldown)
             {
+                lastKickTime = Time.time;
                 TriggerKickAnimation();
             }
-            else if (Input.GetKey(KeyCode.Alpha5))
+            else if (Input.GetKeyDown(KeyCode.Alpha5) && Time.time >= lastPummelTime + specialAbilityCooldown)
             {
+                lastPummelTime = Time.time;
                 TriggerPummelAnimation();
             }
-            else if (Input.GetKey(KeyCode.Alpha6))
+            else if (Input.GetKeyDown(KeyCode.Alpha6) && Time.time >= lastAttackSpinTime + specialAbilityCooldown)
             {
+                lastAttackSpinTime = Time.time;
                 TriggerAttackSpinAnimation();
             }
             else if (Input.GetKey(KeyCode.LeftShift) && isCurrentlyRunning)
@@ -234,33 +253,48 @@ public class AnimationController : MonoBehaviour
             // Check if the right mouse button OR E key is being held down
             if (Input.GetMouseButton(1) || Input.GetKey(KeyCode.E))
             {
-                bool isRunning = isCurrentlyRunning;
-                // Determine the current direction and trigger the appropriate attack attack or attack run attack
-                if (animator.GetBool("isNorth"))
-                    TriggerAttack(isRunning, "North");
-                else if (animator.GetBool("isSouth"))
-                    TriggerAttack(isRunning, "South");
-                else if (animator.GetBool("isEast"))
-                    TriggerAttack(isRunning, "East");
-                else if (animator.GetBool("isWest"))
-                    TriggerAttack(isRunning, "West");
-                else if (animator.GetBool("isNorthEast"))
-                    TriggerAttack(isRunning, "NorthEast");
-                else if (animator.GetBool("isNorthWest"))
-                    TriggerAttack(isRunning, "NorthWest");
-                else if (animator.GetBool("isSouthEast"))
-                    TriggerAttack(isRunning, "SouthEast");
-                else if (animator.GetBool("isSouthWest"))
-                    TriggerAttack(isRunning, "SouthWest");
+                // Only trigger attack if cooldown has passed and not already attacking
+                if (!isAttacking && Time.time >= lastBasicAttackTime + basicAttackCooldown)
+                {
+                    isAttacking = true;
+                    lastBasicAttackTime = Time.time;
+                    bool isRunning = isCurrentlyRunning;
+                    // Determine the current direction and trigger the appropriate attack attack or attack run attack
+                    if (animator.GetBool("isNorth"))
+                        TriggerAttack(isRunning, "North");
+                    else if (animator.GetBool("isSouth"))
+                        TriggerAttack(isRunning, "South");
+                    else if (animator.GetBool("isEast"))
+                        TriggerAttack(isRunning, "East");
+                    else if (animator.GetBool("isWest"))
+                        TriggerAttack(isRunning, "West");
+                    else if (animator.GetBool("isNorthEast"))
+                        TriggerAttack(isRunning, "NorthEast");
+                    else if (animator.GetBool("isNorthWest"))
+                        TriggerAttack(isRunning, "NorthWest");
+                    else if (animator.GetBool("isSouthEast"))
+                        TriggerAttack(isRunning, "SouthEast");
+                    else if (animator.GetBool("isSouthWest"))
+                        TriggerAttack(isRunning, "SouthWest");
+                    
+                    // Reset attack state after a short delay to allow animation to play
+                    Invoke(nameof(ResetAttackState), 0.3f);
+                }
             }
             // Check if the right mouse button OR E key was released
             else if (Input.GetMouseButtonUp(1) || Input.GetKeyUp(KeyCode.E))
             {
                 // Reset attack attack parameters and return to idle state
                 ResetAttackAttackParameters();
+                isAttacking = false;
                 // No need to explicitly set the idle state here since it should naturally follow from resetting the attack parameters
                 // and the movement handling logic already sets the appropriate idle direction based on the last known direction.
             }
+        }
+        
+        void ResetAttackState()
+        {
+            isAttacking = false;
         }
 
         void TriggerAttack(bool isRunning, string direction)
