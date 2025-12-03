@@ -96,6 +96,14 @@ public class HitIndicator : MonoBehaviour
             textMesh.color = damageNumberColor;
         }
 
+        // Set sorting layer to "Player" for the mesh renderer
+        MeshRenderer meshRenderer = damageNumber.GetComponent<MeshRenderer>();
+        if (meshRenderer != null)
+        {
+            meshRenderer.sortingLayerName = "Player";
+            meshRenderer.sortingOrder = 100;
+        }
+
         // Add independent animator component to the damage number itself
         DamageNumberAnimator animator = damageNumber.AddComponent<DamageNumberAnimator>();
         animator.Initialize(damageNumberDuration, damageNumberSpeed);
@@ -115,10 +123,11 @@ public class HitIndicator : MonoBehaviour
         textMesh.alignment = TextAlignment.Center;
         textMesh.characterSize = 0.1f;
 
-        // Make it face the camera
+        // Make it face the camera and set sorting layer
         MeshRenderer meshRenderer = floatingText.GetComponent<MeshRenderer>();
         if (meshRenderer != null)
         {
+            meshRenderer.sortingLayerName = "Player";
             meshRenderer.sortingOrder = 100;
         }
 
