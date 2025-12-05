@@ -250,8 +250,8 @@ public class AnimationController : MonoBehaviour
 
         void HandleAttackAttack()
         {
-            // Check if the right mouse button OR E key is being held down
-            if (Input.GetMouseButton(1) || Input.GetKey(KeyCode.E))
+            // Check if the left mouse button (Mouse1) is being held down
+            if (Input.GetMouseButton(0))
             {
                 // Only trigger attack if cooldown has passed and not already attacking
                 if (!isAttacking && Time.time >= lastBasicAttackTime + basicAttackCooldown)
@@ -276,13 +276,13 @@ public class AnimationController : MonoBehaviour
                         TriggerAttack(isRunning, "SouthEast");
                     else if (animator.GetBool("isSouthWest"))
                         TriggerAttack(isRunning, "SouthWest");
-                    
+
                     // Reset attack state after a short delay to allow animation to play
                     Invoke(nameof(ResetAttackState), 0.3f);
                 }
             }
-            // Check if the right mouse button OR E key was released
-            else if (Input.GetMouseButtonUp(1) || Input.GetKeyUp(KeyCode.E))
+            // Check if the left mouse button was released
+            else if (Input.GetMouseButtonUp(0))
             {
                 // Reset attack attack parameters and return to idle state
                 ResetAttackAttackParameters();

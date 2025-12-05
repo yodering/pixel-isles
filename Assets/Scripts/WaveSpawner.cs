@@ -48,6 +48,11 @@ public class WaveSpawner : MonoBehaviour
     };
     [SerializeField] private string victoryMessage = "Finally...\nIt's over.";
 
+    [Header("Scene Transition")]
+    [SerializeField] private bool autoTransitionOnComplete = true;
+    [SerializeField] private float transitionDelay = 3f;
+    [SerializeField] private string nextSceneName = ""; // Leave empty to load next scene in build order
+
     [Header("Events")]
     public UnityEvent<int> OnWaveStart; // Passes wave number
     public UnityEvent<int> OnWaveComplete; // Passes wave number
@@ -101,7 +106,7 @@ public class WaveSpawner : MonoBehaviour
         waves.Clear();
         Wave wave1 = new Wave();
         wave1.waveName = "Wave_1";
-        wave1.delayBeforeWave = 1f;
+        wave1.delayBeforeWave = 5f; // Longer delay for first wave to let player explore movement
         wave1.enemies.Add(new EnemySpawnInfo { enemyPrefab = enemyPrefabs[0], count = 2, spawnInterval = 0.8f });
         waves.Add(wave1);
 
@@ -231,6 +236,12 @@ public class WaveSpawner : MonoBehaviour
                 if (showDebugLogs) Debug.Log("WaveSpawner: All waves complete!");
                 ShowVictoryMessage();
                 OnAllWavesComplete?.Invoke();
+
+                // Transition to next scene if enabled
+                if (autoTransitionOnComplete)
+                {
+                    StartCoroutine(TransitionToNextScene());
+                }
                 return;
             }
         }
@@ -428,6 +439,38 @@ public class WaveSpawner : MonoBehaviour
         if (speechBubble != null && !string.IsNullOrEmpty(victoryMessage))
         {
             speechBubble.ShowText(victoryMessage, speechDuration * 1.5f);
+        }
+    }
+
+    /// <summary>
+    /// Transition to next scene after delay
+    /// </summary>
+    private IEnumerator TransitionToNextScene()
+    {
+        if (showDebugLogs) Debug.Log($"WaveSpawner: Transitioning to next scene in {transitionDelay} seconds...");
+
+        yield return new WaitForSeconds(transitionDelay);
+
+        SceneLoader sceneLoader = FindAnyObjectByType<SceneLoader>();
+
+        if (sceneLoader != null)
+        {
+            if (!string.IsNullOrEmpty(nextSceneName))
+            {
+                if (showDebugLogs) Debug.Log($"WaveSpawner: Loading scene '{nextSceneName}'");
+                sceneLoader.LoadScene(nextSceneName);
+            }
+            else
+            {
+                // Load next scene in build order
+                int nextSceneIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex + 1;
+                if (showDebugLogs) Debug.Log($"WaveSpawner: Loading scene index {nextSceneIndex}");
+                sceneLoader.LoadSceneByIndex(nextSceneIndex);
+            }
+        }
+        else
+        {
+            Debug.LogWarning("WaveSpawner: No SceneLoader found! Add a SceneLoader to your scene for transitions.");
         }
     }
 

@@ -14,6 +14,12 @@ public class Health : MonoBehaviour
     [Header("Entity Type")]
     [SerializeField] private bool isPlayer = false;
 
+    [Header("Death Notification")]
+    [SerializeField] private bool showDeathMessage = true;
+    [SerializeField] private string deathMessage = "You Died...";
+    [SerializeField] private float deathMessageDuration = 3f;
+    [SerializeField] private SpeechBubble deathSpeechBubble;
+
     [Header("Events")]
     public UnityEvent<float> OnHealthChanged;
     public UnityEvent OnDeath;
@@ -29,6 +35,12 @@ public class Health : MonoBehaviour
         currentHealth = maxHealth;
         animator = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+
+        // Auto-find speech bubble if not assigned and this is the player
+        if (isPlayer && deathSpeechBubble == null)
+        {
+            deathSpeechBubble = FindAnyObjectByType<SpeechBubble>();
+        }
     }
 
     /// <summary>
@@ -86,6 +98,12 @@ public class Health : MonoBehaviour
         Debug.Log($"{gameObject.name} died!");
 
         OnDeath?.Invoke();
+
+        // Show death message for player
+        if (isPlayer && showDeathMessage && deathSpeechBubble != null)
+        {
+            deathSpeechBubble.ShowText(deathMessage, deathMessageDuration);
+        }
 
         // Trigger death animation
         if (animator != null)
