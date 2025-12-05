@@ -31,10 +31,22 @@ public class WaveSpawner : MonoBehaviour
     [SerializeField] private List<Wave> waves = new List<Wave>();
     [SerializeField] private bool autoStartFirstWave = true;
     [SerializeField] private bool loopWaves = false;
+    [SerializeField] private bool usePresetWaves = true; // Use built-in 3-wave setup
 
     [Header("Spawn Areas")]
     [SerializeField] private BoxCollider2D[] spawnAreas;
     [SerializeField] private bool autoFindSpawnAreas = true;
+
+    [Header("Speech Bubble Integration")]
+    [SerializeField] private SpeechBubble speechBubble;
+    [SerializeField] private float speechDuration = 4f;
+    [SerializeField] private string[] waveMessages = new string[]
+    {
+        "Where am I...\nWHAT THE HELL?!",
+        "More of them?\nBring it on!",
+        "This can't be...\nTHE FINAL WAVE!"
+    };
+    [SerializeField] private string victoryMessage = "Finally...\nIt's over.";
 
     [Header("Events")]
     public UnityEvent<int> OnWaveStart; // Passes wave number
@@ -57,10 +69,119 @@ public class WaveSpawner : MonoBehaviour
             FindSpawnAreas();
         }
 
+        if (speechBubble == null)
+        {
+            speechBubble = FindAnyObjectByType<SpeechBubble>();
+        }
+
+        if (usePresetWaves)
+        {
+            SetupPresetWaves();
+        }
+
         if (autoStartFirstWave && waves.Count > 0)
         {
             StartNextWave();
         }
+    }
+
+    /// <summary>
+    /// Setup the 3 preset waves: 2, 3, 5 enemies
+    /// Uses prefabs from existing wave configuration
+    /// </summary>
+    private void SetupPresetWaves()
+    {
+        GameObject[] enemyPrefabs = FindEnemyPrefabs();
+        if (enemyPrefabs.Length == 0)
+        {
+            Debug.LogWarning("WaveSpawner: No enemy prefabs found! Please assign prefabs in Inspector waves.");
+            return;
+        }
+
+        waves.Clear();
+        Wave wave1 = new Wave();
+        wave1.waveName = "Wave_1";
+        wave1.delayBeforeWave = 1f;
+        wave1.enemies.Add(new EnemySpawnInfo { enemyPrefab = enemyPrefabs[0], count = 2, spawnInterval = 0.8f });
+        waves.Add(wave1);
+
+        // Wave 2: 3 enemies (mix types if available)
+        Wave wave2 = new Wave();
+        wave2.waveName = "Wave_2";
+        wave2.delayBeforeWave = 3f;
+        if (enemyPrefabs.Length >= 2)
+        {
+            wave2.enemies.Add(new EnemySpawnInfo { enemyPrefab = enemyPrefabs[0], count = 2, spawnInterval = 0.6f });
+            wave2.enemies.Add(new EnemySpawnInfo { enemyPrefab = enemyPrefabs[1], count = 1, spawnInterval = 0.6f });
+        }
+        else
+        {
+            wave2.enemies.Add(new EnemySpawnInfo { enemyPrefab = enemyPrefabs[0], count = 3, spawnInterval = 0.6f });
+        }
+        waves.Add(wave2);
+
+        // Wave 3: 5 enemies (mix all types)
+        Wave wave3 = new Wave();
+        wave3.waveName = "Wave_3";
+        wave3.delayBeforeWave = 3f;
+        if (enemyPrefabs.Length >= 3)
+        {
+            wave3.enemies.Add(new EnemySpawnInfo { enemyPrefab = enemyPrefabs[0], count = 2, spawnInterval = 0.5f });
+            wave3.enemies.Add(new EnemySpawnInfo { enemyPrefab = enemyPrefabs[1], count = 2, spawnInterval = 0.5f });
+            wave3.enemies.Add(new EnemySpawnInfo { enemyPrefab = enemyPrefabs[2], count = 1, spawnInterval = 0.5f });
+        }
+        else if (enemyPrefabs.Length >= 2)
+        {
+            wave3.enemies.Add(new EnemySpawnInfo { enemyPrefab = enemyPrefabs[0], count = 3, spawnInterval = 0.5f });
+            wave3.enemies.Add(new EnemySpawnInfo { enemyPrefab = enemyPrefabs[1], count = 2, spawnInterval = 0.5f });
+        }
+        else
+        {
+            wave3.enemies.Add(new EnemySpawnInfo { enemyPrefab = enemyPrefabs[0], count = 5, spawnInterval = 0.5f });
+        }
+        waves.Add(wave3);
+
+        if (showDebugLogs) Debug.Log($"WaveSpawner: Setup {waves.Count} preset waves with {enemyPrefabs.Length} enemy types");
+    }
+
+    /// <summary>
+    /// Find enemy prefabs from the current wave configuration
+    /// Must be called BEFORE clearing waves!
+    /// </summary>
+    private GameObject[] FindEnemyPrefabs()
+    {
+        List<GameObject> prefabs = new List<GameObject>();
+        
+        if (waves != null && waves.Count > 0)
+        {
+            foreach (Wave wave in waves)
+            {
+                if (wave.enemies != null)
+                {
+                    foreach (EnemySpawnInfo enemyInfo in wave.enemies)
+                    {
+                        if (enemyInfo.enemyPrefab != null && !prefabs.Contains(enemyInfo.enemyPrefab))
+                        {
+                            prefabs.Add(enemyInfo.enemyPrefab);
+                        }
+                    }
+                }
+            }
+        }
+        if (prefabs.Count == 0)
+        {
+            string[] prefabNames = { "Knight", "Paladin", "Mage", "DarkLord" };
+            foreach (string prefabName in prefabNames)
+            {
+                GameObject prefab = Resources.Load<GameObject>($"Prefabs/Enemies/{prefabName}");
+                if (prefab != null && !prefabs.Contains(prefab))
+                {
+                    prefabs.Add(prefab);
+                }
+            }
+        }
+
+        return prefabs.ToArray();
     }
 
     void Update()
@@ -108,6 +229,7 @@ public class WaveSpawner : MonoBehaviour
             else
             {
                 if (showDebugLogs) Debug.Log("WaveSpawner: All waves complete!");
+                ShowVictoryMessage();
                 OnAllWavesComplete?.Invoke();
                 return;
             }
@@ -160,6 +282,10 @@ public class WaveSpawner : MonoBehaviour
         }
 
         if (showDebugLogs) Debug.Log($"WaveSpawner: Starting {wave.waveName} (Wave {waveNumber + 1}) - {totalEnemiesInCurrentWave} enemies");
+        
+        // Show speech bubble message for this wave
+        ShowWaveMessage(waveNumber);
+        
         OnWaveStart?.Invoke(waveNumber + 1);
 
         // Spawn each enemy type in the wave
@@ -258,6 +384,43 @@ public class WaveSpawner : MonoBehaviour
         float randomX = Random.Range(bounds.min.x, bounds.max.x);
         float randomY = Random.Range(bounds.min.y, bounds.max.y);
         return new Vector3(randomX, randomY, 0);
+    }
+
+    /// <summary>
+    /// Show speech bubble message for the current wave
+    /// </summary>
+    private void ShowWaveMessage(int waveIndex)
+    {
+        if (speechBubble == null) return;
+
+        string message = "";
+        
+        if (waveIndex >= 0 && waveIndex < waveMessages.Length)
+        {
+            message = waveMessages[waveIndex];
+        }
+        else if (waveMessages.Length > 0)
+        {
+            // Fallback to last message if wave index exceeds array
+            message = waveMessages[waveMessages.Length - 1];
+        }
+
+        if (!string.IsNullOrEmpty(message))
+        {
+            speechBubble.ShowText(message, speechDuration);
+            if (showDebugLogs) Debug.Log($"WaveSpawner: Showing message for wave {waveIndex + 1}");
+        }
+    }
+
+    /// <summary>
+    /// Show victory message when all waves complete
+    /// </summary>
+    private void ShowVictoryMessage()
+    {
+        if (speechBubble != null && !string.IsNullOrEmpty(victoryMessage))
+        {
+            speechBubble.ShowText(victoryMessage, speechDuration * 1.5f);
+        }
     }
 
     // Public getters

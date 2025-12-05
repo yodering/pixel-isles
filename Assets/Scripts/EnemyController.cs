@@ -11,6 +11,14 @@ public class EnemyController : MonoBehaviour
     [SerializeField] private float stuckThreshold = 0.02f;
     [SerializeField] private float obstacleDetectionDistance = 1.0f;
     [SerializeField] private LayerMask obstacleLayer;
+    
+    [Header("Teleport When Stuck")]
+    [SerializeField] private bool teleportWhenStuck = true;
+    [SerializeField] private float stuckTimeBeforeTeleport = 2.5f; // Seconds stuck before teleporting
+    [SerializeField] private float teleportMinDistance = 1.2f; // Min distance from player (closer!)
+    [SerializeField] private float teleportMaxDistance = 2.5f; // Max distance from player (closer!)
+    [SerializeField] private float teleportStunDuration = 3.0f; // Can't attack after teleporting
+    [SerializeField] private GameObject teleportEffectPrefab; // Optional particle effect
 
     [Header("Advanced Pathfinding")]
     [SerializeField] private int raycastDirections = 16; // Number of directions to check for obstacles
@@ -38,11 +46,11 @@ public class EnemyController : MonoBehaviour
     private string currentAttackAnimationParam = null;
     private Vector2 lastPosition;
     private float lastStuckCheck = 0f;
-    private Vector2 unstuckDirection = Vector2.zero;
-    private float unstuckTimer = 0f;
-    private int consecutiveStuckFrames = 0;
-    private const int maxStuckFrames = 3;
     private Vector2 desiredVelocity = Vector2.zero;
+    private float totalStuckTime = 0f; // Track total time stuck for teleport
+    private float teleportStunTimer = 0f; // Can't attack while stunned after teleport
+    private bool isStunnedFromTeleport = false;
+    private SpriteRenderer spriteRenderer; // Cache for visual effects
 
     // A* Pathfinding variables
     private List<Vector3> currentPath;
@@ -55,6 +63,9 @@ public class EnemyController : MonoBehaviour
         animator = GetComponent<Animator>();
         health = GetComponent<Health>();
         lastPosition = transform.position;
+        
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) spriteRenderer = GetComponentInChildren<SpriteRenderer>();
 
         PlayerController playerController = GetComponent<PlayerController>();
         if (playerController != null) Destroy(playerController);
@@ -83,6 +94,19 @@ public class EnemyController : MonoBehaviour
             return;
         }
 
+        // Handle teleport stun timer
+        if (isStunnedFromTeleport)
+        {
+            teleportStunTimer -= Time.deltaTime;
+            if (teleportStunTimer <= 0f)
+            {
+                isStunnedFromTeleport = false;
+                teleportStunTimer = 0f;
+                // Restore normal color
+                if (spriteRenderer != null) spriteRenderer.color = Color.white;
+            }
+        }
+
         float distanceToPlayer = Vector2.Distance(transform.position, player.position);
         Vector2 desiredDirection = (player.position - transform.position).normalized;
 
@@ -99,7 +123,6 @@ public class EnemyController : MonoBehaviour
 
         UpdateStuckState(distanceToPlayer, moveDirection);
 
-        if (unstuckTimer > 0f) moveDirection = unstuckDirection;
         if (moveDirection.sqrMagnitude > 0.0001f) moveDirection = moveDirection.normalized;
 
         float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
@@ -107,7 +130,8 @@ public class EnemyController : MonoBehaviour
         UpdateDirectionAnimations(lastAngle);
 
         bool playerInStrikeRange = IsPlayerWithinStrikeRange(distanceToPlayer);
-        bool canAttack = playerInStrikeRange && Time.time >= lastAttackTime + attackCooldown;
+        // Can't attack while stunned from teleport!
+        bool canAttack = playerInStrikeRange && Time.time >= lastAttackTime + attackCooldown && !isStunnedFromTeleport;
 
         if (canAttack && !isAttacking)
         {
@@ -394,19 +418,10 @@ public class EnemyController : MonoBehaviour
         {
             lastPosition = transform.position;
             lastStuckCheck = Time.time;
-            consecutiveStuckFrames = 0;
+            totalStuckTime = 0f;
             return;
         }
-        if (unstuckTimer > 0f)
-        {
-            unstuckTimer -= Time.deltaTime;
-            if (unstuckTimer <= 0f)
-            {
-                unstuckTimer = 0f;
-                unstuckDirection = Vector2.zero;
-                consecutiveStuckFrames = 0;
-            }
-        }
+
         if (Time.time < lastStuckCheck + stuckCheckInterval) return;
 
         Vector2 currentPosition = transform.position;
@@ -415,34 +430,220 @@ public class EnemyController : MonoBehaviour
 
         if (movedDistance < stuckThreshold && tryingToMove)
         {
-            consecutiveStuckFrames++;
-            if (consecutiveStuckFrames >= maxStuckFrames)
+            // Accumulate stuck time
+            totalStuckTime += stuckCheckInterval;
+            
+            // Teleport after being stuck for the threshold time
+            if (teleportWhenStuck && player != null && totalStuckTime >= stuckTimeBeforeTeleport)
             {
-                Vector2[] escapeDirections = new Vector2[]
-                {
-                    new Vector2(-moveDirection.y, moveDirection.x),
-                    new Vector2(moveDirection.y, -moveDirection.x),
-                    -moveDirection,
-                    Random.insideUnitCircle.normalized
-                };
-                foreach (Vector2 escapeDir in escapeDirections)
-                {
-                    RaycastHit2D escapeCheck = Physics2D.Raycast(transform.position, escapeDir, obstacleDetectionDistance * 0.5f, obstacleLayer);
-                    if (escapeCheck.collider == null)
-                    {
-                        unstuckDirection = escapeDir.normalized;
-                        unstuckTimer = 0.4f;
-                        consecutiveStuckFrames = 0;
-                        Debug.Log($"{gameObject.name} detected stuck, escaping");
-                        break;
-                    }
-                }
+                Debug.Log($"{gameObject.name} stuck for {totalStuckTime:F1}s, teleporting near player!");
+                TeleportNearPlayer();
+                totalStuckTime = 0f;
             }
         }
-        else consecutiveStuckFrames = 0;
+        else
+        {
+            // Moving successfully - reset stuck time
+            totalStuckTime = 0f;
+        }
 
         lastPosition = currentPosition;
         lastStuckCheck = Time.time;
+    }
+
+    private void TeleportNearPlayer()
+    {
+        if (player == null) return;
+
+        Vector2 playerPos = player.position;
+        Vector2 teleportPos = Vector2.zero;
+        bool foundValidPosition = false;
+
+        // Try multiple angles at different distances
+        float[] angles = { 180f, 150f, 210f, 120f, 240f, 90f, 270f, 60f, 300f, 45f, 315f, 30f, 330f, 0f };
+        float[] distances = { teleportMinDistance, (teleportMinDistance + teleportMaxDistance) / 2f, teleportMaxDistance };
+        
+        // Get player's facing direction
+        Vector2 playerFacing = Vector2.right;
+        Rigidbody2D playerRb = player.GetComponent<Rigidbody2D>();
+        if (playerRb != null && playerRb.linearVelocity.magnitude > 0.1f)
+        {
+            playerFacing = playerRb.linearVelocity.normalized;
+        }
+        float baseAngle = Mathf.Atan2(playerFacing.y, playerFacing.x) * Mathf.Rad2Deg;
+
+        // Try systematic positions
+        foreach (float dist in distances)
+        {
+            foreach (float angleOffset in angles)
+            {
+                float finalAngle = (baseAngle + angleOffset) * Mathf.Deg2Rad;
+                Vector2 offset = new Vector2(Mathf.Cos(finalAngle), Mathf.Sin(finalAngle)) * dist;
+                Vector2 candidatePos = playerPos + offset;
+
+                if (IsValidTeleportPosition(candidatePos))
+                {
+                    teleportPos = candidatePos;
+                    foundValidPosition = true;
+                    break;
+                }
+            }
+            if (foundValidPosition) break;
+        }
+
+        // Last resort: try many random positions
+        if (!foundValidPosition)
+        {
+            for (int i = 0; i < 30; i++)
+            {
+                float randomAngle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+                float distance = Random.Range(teleportMinDistance, teleportMaxDistance);
+                Vector2 offset = new Vector2(Mathf.Cos(randomAngle), Mathf.Sin(randomAngle)) * distance;
+                Vector2 candidatePos = playerPos + offset;
+
+                if (IsValidTeleportPosition(candidatePos))
+                {
+                    teleportPos = candidatePos;
+                    foundValidPosition = true;
+                    break;
+                }
+            }
+        }
+
+        if (foundValidPosition)
+        {
+            // Spawn teleport effect at old position
+            if (teleportEffectPrefab != null)
+            {
+                Instantiate(teleportEffectPrefab, transform.position, Quaternion.identity);
+            }
+
+            transform.position = teleportPos;
+            lastPosition = teleportPos;
+            if (teleportEffectPrefab != null)
+            {
+                Instantiate(teleportEffectPrefab, teleportPos, Quaternion.identity);
+            }
+
+            isStunnedFromTeleport = true;
+            teleportStunTimer = teleportStunDuration;
+            
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = new Color(0.5f, 0.8f, 1f, 1f);
+            }
+            
+            StartCoroutine(TeleportStunVisualEffect());
+
+            Debug.Log($"{gameObject.name} teleported near player to {teleportPos}, stunned for {teleportStunDuration}s");
+        }
+        else
+        {
+            Debug.LogWarning($"{gameObject.name} could not find valid teleport position inside boundaries!");
+        }
+    }
+
+    private bool IsValidTeleportPosition(Vector2 position)
+    {
+        Collider2D obstacle = Physics2D.OverlapCircle(position, 0.4f, obstacleLayer);
+        if (obstacle != null) return false;
+
+        EdgeCollider2D[] edgeColliders = FindObjectsByType<EdgeCollider2D>(FindObjectsSortMode.None);
+        if (edgeColliders.Length == 0) return true;
+        foreach (EdgeCollider2D edge in edgeColliders)
+        {
+            if (IsPointInsideEdgeCollider(position, edge))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Check if a point is inside the polygon formed by an EdgeCollider2D
+    /// Uses the ray casting algorithm (count edge crossings)
+    /// </summary>
+    private bool IsPointInsideEdgeCollider(Vector2 point, EdgeCollider2D edge)
+    {
+        if (edge == null) return false;
+
+        // Get world-space points of the edge collider
+        Vector2[] localPoints = edge.points;
+        Vector2[] worldPoints = new Vector2[localPoints.Length];
+        
+        for (int i = 0; i < localPoints.Length; i++)
+        {
+            worldPoints[i] = edge.transform.TransformPoint(localPoints[i]);
+        }
+
+        // Ray casting algorithm: count how many times a horizontal ray crosses the polygon
+        int crossings = 0;
+        int pointCount = worldPoints.Length;
+
+        for (int i = 0; i < pointCount; i++)
+        {
+            Vector2 p1 = worldPoints[i];
+            Vector2 p2 = worldPoints[(i + 1) % pointCount];
+
+            // Check if the ray from 'point' going right crosses this edge
+            if (RayCrossesEdge(point, p1, p2))
+            {
+                crossings++;
+            }
+        }
+
+        // Odd number of crossings = inside, even = outside
+        return (crossings % 2) == 1;
+    }
+
+    /// <summary>
+    /// Check if a horizontal ray from 'point' going right crosses the edge p1-p2
+    /// </summary>
+    private bool RayCrossesEdge(Vector2 point, Vector2 p1, Vector2 p2)
+    {
+        // Ensure p1 is below p2 for consistent checking
+        if (p1.y > p2.y)
+        {
+            Vector2 temp = p1;
+            p1 = p2;
+            p2 = temp;
+        }
+
+        // Point is outside the vertical range of this edge
+        if (point.y <= p1.y || point.y > p2.y)
+        {
+            return false;
+        }
+
+        // Calculate x-coordinate where the ray intersects the edge
+        float slope = (p2.x - p1.x) / (p2.y - p1.y);
+        float intersectX = p1.x + (point.y - p1.y) * slope;
+
+        // Ray crosses if intersection is to the right of the point
+        return point.x < intersectX;
+    }
+
+    /// <summary>
+    /// Visual effect while stunned after teleporting - pulsing cyan color
+    /// </summary>
+    private System.Collections.IEnumerator TeleportStunVisualEffect()
+    {
+        if (spriteRenderer == null) yield break;
+
+        Color stunColor1 = new Color(0.5f, 0.8f, 1f, 1f);
+        Color stunColor2 = new Color(0.7f, 0.9f, 1f, 1f);
+        float pulseSpeed = 3f;
+        
+        while (isStunnedFromTeleport && teleportStunTimer > 0)
+        {
+            float t = (Mathf.Sin(Time.time * pulseSpeed) + 1f) / 2f;
+            spriteRenderer.color = Color.Lerp(stunColor1, stunColor2, t);
+            yield return null;
+        }
+        
+        spriteRenderer.color = Color.white;
     }
 
     private Vector2 GetPathfindingDirection(float distanceToPlayer)
@@ -561,11 +762,6 @@ public class EnemyController : MonoBehaviour
             }
         }
 
-        // Draw unstuck direction if active
-        if (unstuckTimer > 0f)
-        {
-            Gizmos.color = new Color(1, 0.5f, 0, 1f); // Orange
-            Gizmos.DrawRay(transform.position, unstuckDirection * obstacleDetectionDistance);
-        }
     }
 }
+
