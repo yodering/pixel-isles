@@ -110,6 +110,13 @@ public class TestSpawner : MonoBehaviour
         GameObject enemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
         enemy.tag = "Enemy";
 
+        // Set sorting layer to "Player" for all sprite renderers
+        SpriteRenderer[] renderers = enemy.GetComponentsInChildren<SpriteRenderer>();
+        foreach (SpriteRenderer renderer in renderers)
+        {
+            renderer.sortingLayerName = "Player";
+        }
+
         Debug.Log($"Spawned enemy {currentEnemyCount + 1}/{maxEnemies} at ({spawnPosition.x:F1}, {spawnPosition.y:F1}) via {spawnArea.gameObject.name}");
     }
 

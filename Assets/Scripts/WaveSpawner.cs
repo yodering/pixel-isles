@@ -332,6 +332,14 @@ public class WaveSpawner : MonoBehaviour
         // Spawn enemy
         GameObject enemy = Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
         enemy.tag = "Enemy";
+
+        // Set sorting layer to "Player" for all sprite renderers
+        SpriteRenderer[] renderers = enemy.GetComponentsInChildren<SpriteRenderer>();
+        foreach (SpriteRenderer renderer in renderers)
+        {
+            renderer.sortingLayerName = "Player";
+        }
+
         activeEnemies.Add(enemy);
 
         if (showDebugLogs) Debug.Log($"WaveSpawner: Spawned {enemyPrefab.name} at {spawnPosition}");
