@@ -20,6 +20,11 @@ public class PlayerController : MonoBehaviour
         public float projectileSpeed = 10.0f; // Speed at which the projectile travels
         public float shootDelay = 0.5f; // Delay in seconds before the projectile is fired
 
+        // Ability unlock system
+        private int hitCount = 0; // Tracks successful hits on enemies
+        private int killCount = 0; // Tracks enemy kills
+        private bool isProjectileUnlocked = false; // Q ability (unlocks after 2 hits)
+        private bool isAoEUnlocked = false; // F ability (unlocks after 5 kills)
 
         void Start()
         {
@@ -45,6 +50,26 @@ public class PlayerController : MonoBehaviour
 
             if (isRanged)
             {
+                // Q key - Single projectile (unlocks after 2 hits, resets after use)
+                if (Input.GetKeyDown(KeyCode.Q) && isProjectileUnlocked)
+                {
+                    Invoke(nameof(DelayedShoot), shootDelay);
+                    // Reset ability after use
+                    isProjectileUnlocked = false;
+                    hitCount = 0;
+                    Debug.Log("Projectile ability used! Reset to 0/2 hits");
+                }
+                // F key - AOE attack (unlocks after 5 kills, resets after use)
+                if (Input.GetKeyDown(KeyCode.F) && isAoEUnlocked)
+                {
+                    StartCoroutine(DeployAoEDelayed());
+                    // Reset ability after use
+                    isAoEUnlocked = false;
+                    killCount = 0;
+                    Debug.Log("AOE ability used! Reset to 0/5 kills");
+                }
+
+                // Legacy keys still work for testing
                 if (Input.GetMouseButtonDown(1))
                 {
                     Invoke(nameof(DelayedShoot), shootDelay);
@@ -56,10 +81,6 @@ public class PlayerController : MonoBehaviour
                 if (Input.GetKeyDown(KeyCode.Alpha6))
                 {
                     StartCoroutine(CircleShot());
-                }
-                if (Input.GetKeyDown(KeyCode.Alpha3))
-                {
-                    StartCoroutine(DeployAoEDelayed());
                 }
             }
         }
@@ -232,6 +253,13 @@ public class PlayerController : MonoBehaviour
                 renderer.sortingLayerName = "Player";
             }
 
+            // Set projectile to one-shot damage
+            DamageDealer damageDealer = projectileInstance.GetComponent<DamageDealer>();
+            if (damageDealer != null)
+            {
+                damageDealer.SetDamage(9999f); // One-shot damage
+            }
+
             Rigidbody2D rbProjectile = projectileInstance.GetComponent<Rigidbody2D>();
             if (rbProjectile != null)
             {
@@ -292,8 +320,48 @@ public class PlayerController : MonoBehaviour
                     renderer.sortingLayerName = "Player";
                 }
 
+                // Set AOE to one-shot damage
+                DamageDealer[] damageDealers = aoeInstance.GetComponentsInChildren<DamageDealer>();
+                foreach (DamageDealer damageDealer in damageDealers)
+                {
+                    damageDealer.SetDamage(9999f); // One-shot damage
+                }
+
                 // Destroy the instantiated prefab after another 0.5 seconds
                 Destroy(aoeInstance, 0.5f);
             }
         }
+
+        // Ability unlock tracking methods
+        public void OnEnemyHit()
+        {
+            hitCount++;
+            Debug.Log($"Hit count: {hitCount}");
+
+            // Unlock projectile ability after 2 hits
+            if (hitCount >= 2 && !isProjectileUnlocked)
+            {
+                isProjectileUnlocked = true;
+                Debug.Log("Projectile ability (Q) unlocked!");
+            }
+        }
+
+        public void OnEnemyKilled()
+        {
+            killCount++;
+            Debug.Log($"Kill count: {killCount}");
+
+            // Unlock AOE ability after 5 kills
+            if (killCount >= 5 && !isAoEUnlocked)
+            {
+                isAoEUnlocked = true;
+                Debug.Log("AOE ability (F) unlocked!");
+            }
+        }
+
+        // Public getters for ability unlock status
+        public bool IsProjectileUnlocked() => isProjectileUnlocked;
+        public bool IsAoEUnlocked() => isAoEUnlocked;
+        public int GetHitCount() => hitCount;
+        public int GetKillCount() => killCount;
     }

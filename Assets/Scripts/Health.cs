@@ -24,6 +24,10 @@ public class Health : MonoBehaviour
     public UnityEvent<float> OnHealthChanged;
     public UnityEvent OnDeath;
 
+    [Header("Invincibility")]
+    private bool isInvincible = false;
+    private float invincibilityTimer = 0f;
+
     private bool isDead = false;
     private Animator animator;
     private SpriteRenderer spriteRenderer;
@@ -48,7 +52,7 @@ public class Health : MonoBehaviour
     /// </summary>
     public void TakeDamage(float damage)
     {
-        if (isDead) return;
+        if (isDead || isInvincible) return;
 
         currentHealth -= damage;
         currentHealth = Mathf.Max(0, currentHealth); // Clamp to 0
@@ -141,6 +145,17 @@ public class Health : MonoBehaviour
 
     void Update()
     {
+        // Handle invincibility timer
+        if (isInvincible && invincibilityTimer > 0f)
+        {
+            invincibilityTimer -= Time.deltaTime;
+            if (invincibilityTimer <= 0f)
+            {
+                isInvincible = false;
+                invincibilityTimer = 0f;
+            }
+        }
+
         // Handle fade out effect when dead (both player and enemies)
         if (isDead && spriteRenderer != null)
         {
@@ -160,10 +175,30 @@ public class Health : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Set invincibility for a duration
+    /// </summary>
+    public void SetInvincible(float duration)
+    {
+        isInvincible = true;
+        invincibilityTimer = duration;
+        Debug.Log($"{gameObject.name} is now invincible for {duration} seconds");
+    }
+
+    /// <summary>
+    /// Remove invincibility immediately
+    /// </summary>
+    public void RemoveInvincibility()
+    {
+        isInvincible = false;
+        invincibilityTimer = 0f;
+    }
+
     // Public getters
     public float GetCurrentHealth() => currentHealth;
     public float GetMaxHealth() => maxHealth;
     public float GetHealthPercentage() => currentHealth / maxHealth;
     public bool IsDead() => isDead;
     public bool IsPlayer() => isPlayer;
+    public bool IsInvincible() => isInvincible;
 }

@@ -11,11 +11,12 @@ public class PlayerAttackHitbox : MonoBehaviour
     [SerializeField] private float attackDamage = 15f;
 
     [Header("Vampirism Settings")]
-    [Tooltip("Percentage of damage dealt that is converted to health (0-1). 0.2 = 20% life steal")]
-    [SerializeField] private float lifeStealPercentage = 0.2f;
+    [Tooltip("Flat amount of health restored on each hit")]
+    [SerializeField] private float lifeStealAmount = 10f;
 
     private Collider2D hitboxCollider;
     private Health playerHealth;
+    private PlayerController playerController;
 
     void Start()
     {
@@ -27,11 +28,12 @@ public class PlayerAttackHitbox : MonoBehaviour
             hitboxCollider.enabled = false; // Disabled by default, enabled during attacks
         }
 
-        // Find player's health component
+        // Find player's health and controller components
         GameObject player = GameObject.FindGameObjectWithTag("Player1");
         if (player != null)
         {
             playerHealth = player.GetComponent<Health>();
+            playerController = player.GetComponent<PlayerController>();
         }
     }
 
@@ -68,15 +70,30 @@ public class PlayerAttackHitbox : MonoBehaviour
             Health enemyHealth = collision.GetComponent<Health>();
             if (enemyHealth != null && !enemyHealth.IsPlayer())
             {
+                float currentHealth = enemyHealth.GetCurrentHealth();
                 enemyHealth.TakeDamage(attackDamage);
                 Debug.Log($"Player hit {collision.gameObject.name} for {attackDamage} damage!");
 
-                // Vampirism: Restore health based on damage dealt
-                if (playerHealth != null && lifeStealPercentage > 0)
+                // Track hit for ability unlock
+                if (playerController != null)
                 {
-                    float healAmount = attackDamage * lifeStealPercentage;
-                    playerHealth.Heal(healAmount);
-                    Debug.Log($"Life steal: Restored {healAmount} health ({lifeStealPercentage * 100}% of damage)");
+                    playerController.OnEnemyHit();
+                }
+
+                // Check if enemy died from this hit
+                if (currentHealth > 0 && enemyHealth.GetCurrentHealth() <= 0)
+                {
+                    if (playerController != null)
+                    {
+                        playerController.OnEnemyKilled();
+                    }
+                }
+
+                // Vampirism: Restore flat health on hit
+                if (playerHealth != null && lifeStealAmount > 0)
+                {
+                    playerHealth.Heal(lifeStealAmount);
+                    Debug.Log($"Life steal: Restored {lifeStealAmount} health");
                 }
             }
         }

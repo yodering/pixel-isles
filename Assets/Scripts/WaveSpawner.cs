@@ -40,12 +40,9 @@ public class WaveSpawner : MonoBehaviour
     [Header("Speech Bubble Integration")]
     [SerializeField] private SpeechBubble speechBubble;
     [SerializeField] private float speechDuration = 4f;
-    [SerializeField] private string[] waveMessages = new string[]
-    {
-        "Where am I...\nWHAT THE HELL?!",
-        "More of them?\nBring it on!",
-        "This can't be...\nTHE FINAL WAVE!"
-    };
+    [Tooltip("Message shown only once when entering this scene/environment")]
+    [SerializeField] private string environmentMessage = "Where am I...\nWHAT THE HELL?!";
+    [SerializeField] private bool showEnvironmentMessageOnStart = true;
     [SerializeField] private string victoryMessage = "Finally...\nIt's over.";
 
     [Header("Scene Transition")]
@@ -66,6 +63,7 @@ public class WaveSpawner : MonoBehaviour
     private bool isSpawningWave = false;
     private List<GameObject> activeEnemies = new List<GameObject>();
     private int totalEnemiesInCurrentWave = 0;
+    private bool hasShownEnvironmentMessage = false;
 
     void Start()
     {
@@ -82,6 +80,12 @@ public class WaveSpawner : MonoBehaviour
         if (usePresetWaves)
         {
             SetupPresetWaves();
+        }
+
+        // Show environment-specific message once on scene start
+        if (showEnvironmentMessageOnStart && !string.IsNullOrEmpty(environmentMessage))
+        {
+            ShowEnvironmentMessage();
         }
 
         if (autoStartFirstWave && waves.Count > 0)
@@ -293,10 +297,7 @@ public class WaveSpawner : MonoBehaviour
         }
 
         if (showDebugLogs) Debug.Log($"WaveSpawner: Starting {wave.waveName} (Wave {waveNumber + 1}) - {totalEnemiesInCurrentWave} enemies");
-        
-        // Show speech bubble message for this wave
-        ShowWaveMessage(waveNumber);
-        
+
         OnWaveStart?.Invoke(waveNumber + 1);
 
         // Spawn each enemy type in the wave
@@ -406,28 +407,17 @@ public class WaveSpawner : MonoBehaviour
     }
 
     /// <summary>
-    /// Show speech bubble message for the current wave
+    /// Show environment-specific message once when entering the scene
     /// </summary>
-    private void ShowWaveMessage(int waveIndex)
+    private void ShowEnvironmentMessage()
     {
-        if (speechBubble == null) return;
+        if (speechBubble == null || hasShownEnvironmentMessage) return;
 
-        string message = "";
-        
-        if (waveIndex >= 0 && waveIndex < waveMessages.Length)
+        if (!string.IsNullOrEmpty(environmentMessage))
         {
-            message = waveMessages[waveIndex];
-        }
-        else if (waveMessages.Length > 0)
-        {
-            // Fallback to last message if wave index exceeds array
-            message = waveMessages[waveMessages.Length - 1];
-        }
-
-        if (!string.IsNullOrEmpty(message))
-        {
-            speechBubble.ShowText(message, speechDuration);
-            if (showDebugLogs) Debug.Log($"WaveSpawner: Showing message for wave {waveIndex + 1}");
+            speechBubble.ShowText(environmentMessage, speechDuration);
+            hasShownEnvironmentMessage = true;
+            if (showDebugLogs) Debug.Log($"WaveSpawner: Showing environment message: {environmentMessage}");
         }
     }
 

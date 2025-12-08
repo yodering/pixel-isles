@@ -10,26 +10,31 @@ public class SimpleUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI healthText;
     [SerializeField] private TextMeshProUGUI enemyCountText;
     [SerializeField] private TextMeshProUGUI instructionsText;
+    [SerializeField] private TextMeshProUGUI abilitiesText;
 
     [Header("Player Reference")]
     [SerializeField] private Health playerHealth;
+    [SerializeField] private PlayerController playerController;
 
     void Start()
     {
         // Find player if not assigned
-        if (playerHealth == null)
+        if (playerHealth == null || playerController == null)
         {
             GameObject player = GameObject.FindGameObjectWithTag("Player1");
             if (player != null)
             {
-                playerHealth = player.GetComponent<Health>();
+                if (playerHealth == null)
+                    playerHealth = player.GetComponent<Health>();
+                if (playerController == null)
+                    playerController = player.GetComponent<PlayerController>();
             }
         }
 
         // Setup instructions
         if (instructionsText != null)
         {
-            instructionsText.text = "CONTROLS:\nWASD - Move\nMouse - Aim\nRight Click - Attack\nT - Spawn 1 Enemy\nY - Spawn 5 Enemies\nC - Crouch";
+            instructionsText.text = "CONTROLS:\nWASD - Move | Mouse - Aim\n[E] Sword | [Q] Projectile | [F] AOE\nC - Crouch";
         }
     }
 
@@ -37,6 +42,7 @@ public class SimpleUI : MonoBehaviour
     {
         UpdateHealthDisplay();
         UpdateEnemyCount();
+        UpdateAbilitiesDisplay();
     }
 
     /// <summary>
@@ -70,5 +76,51 @@ public class SimpleUI : MonoBehaviour
 
         int enemyCount = GameObject.FindGameObjectsWithTag("Enemy").Length;
         enemyCountText.text = $"Enemies: {enemyCount}";
+    }
+
+    /// <summary>
+    /// Update the abilities status display
+    /// </summary>
+    private void UpdateAbilitiesDisplay()
+    {
+        if (abilitiesText == null || playerController == null) return;
+
+        // Only show if player is ranged character
+        if (!playerController.isRanged)
+        {
+            abilitiesText.text = "";
+            return;
+        }
+
+        int hitCount = playerController.GetHitCount();
+        int killCount = playerController.GetKillCount();
+        bool qUnlocked = playerController.IsProjectileUnlocked();
+        bool fUnlocked = playerController.IsAoEUnlocked();
+
+        // Build ability status text
+        string abilities = "=== ABILITIES ===\n";
+        abilities += "[E] Sword Attack (Always Available)\n";
+
+        // Q - Projectile ability
+        if (qUnlocked)
+        {
+            abilities += "<color=#00FF00>[Q] Projectile UNLOCKED</color>\n";
+        }
+        else
+        {
+            abilities += $"<color=#888888>[Q] Projectile LOCKED ({hitCount}/2 hits)</color>\n";
+        }
+
+        // F - AOE ability
+        if (fUnlocked)
+        {
+            abilities += "<color=#00FF00>[F] AOE Attack UNLOCKED</color>";
+        }
+        else
+        {
+            abilities += $"<color=#888888>[F] AOE Attack LOCKED ({killCount}/5 kills)</color>";
+        }
+
+        abilitiesText.text = abilities;
     }
 }

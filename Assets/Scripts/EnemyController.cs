@@ -527,15 +527,22 @@ public class EnemyController : MonoBehaviour
 
             isStunnedFromTeleport = true;
             teleportStunTimer = teleportStunDuration;
-            
+
+            // Make enemy invincible during stun phase
+            Health health = GetComponent<Health>();
+            if (health != null)
+            {
+                health.SetInvincible(teleportStunDuration);
+            }
+
             if (spriteRenderer != null)
             {
                 spriteRenderer.color = new Color(0.5f, 0.8f, 1f, 1f);
             }
-            
+
             StartCoroutine(TeleportStunVisualEffect());
 
-            Debug.Log($"{gameObject.name} teleported near player to {teleportPos}, stunned for {teleportStunDuration}s");
+            Debug.Log($"{gameObject.name} teleported near player to {teleportPos}, stunned and invincible for {teleportStunDuration}s");
         }
         else
         {

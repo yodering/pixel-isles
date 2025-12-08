@@ -13,7 +13,7 @@ public class AnimationController : MonoBehaviour
         [SerializeField] private PlayerAttackHitbox attackHitbox;
         
         [Header("Attack Cooldowns")]
-        [SerializeField] private float basicAttackCooldown = 0.5f; // Cooldown for E key / right mouse button attacks
+        [SerializeField] private float basicAttackCooldown = 0.25f; // Cooldown for basic sword attacks
         [SerializeField] private float specialAbilityCooldown = 1.0f; // Cooldown for special abilities (Alpha1-6)
         
         private float lastBasicAttackTime = 0f;
@@ -250,8 +250,8 @@ public class AnimationController : MonoBehaviour
 
         void HandleAttackAttack()
         {
-            // Check if the left mouse button (Mouse1) is being held down
-            if (Input.GetMouseButton(0))
+            // Check if the left mouse button or E key is being pressed
+            if (Input.GetMouseButton(0) || Input.GetKey(KeyCode.E))
             {
                 // Only trigger attack if cooldown has passed and not already attacking
                 if (!isAttacking && Time.time >= lastBasicAttackTime + basicAttackCooldown)
@@ -281,8 +281,8 @@ public class AnimationController : MonoBehaviour
                     Invoke(nameof(ResetAttackState), 0.3f);
                 }
             }
-            // Check if the left mouse button was released
-            else if (Input.GetMouseButtonUp(0))
+            // Check if the left mouse button or E key was released
+            else if (Input.GetMouseButtonUp(0) || Input.GetKeyUp(KeyCode.E))
             {
                 // Reset attack attack parameters and return to idle state
                 ResetAttackAttackParameters();
