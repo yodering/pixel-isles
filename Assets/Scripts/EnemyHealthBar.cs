@@ -26,14 +26,27 @@ public class EnemyHealthBar : MonoBehaviour
     [SerializeField] private float mediumHealthThreshold = 0.6f;
     [SerializeField] private float lowHealthThreshold = 0.3f;
 
+    [Header("Rendering Settings")]
+    [SerializeField] private string sortingLayerName = "Default";
+    [SerializeField] private int sortingOrder = 100;
+
     void Start()
     {
         health = GetComponent<Health>();
         mainCamera = Camera.main;
 
+        // If Camera.main fails, try to find any camera
         if (mainCamera == null)
         {
-            Debug.LogWarning($"EnemyHealthBar on {gameObject.name}: No main camera found!");
+            mainCamera = FindAnyObjectByType<Camera>();
+            if (mainCamera != null)
+            {
+                Debug.LogWarning($"EnemyHealthBar on {gameObject.name}: Camera.main not found, using fallback camera: {mainCamera.name}");
+            }
+            else
+            {
+                Debug.LogError($"EnemyHealthBar on {gameObject.name}: No camera found in scene at all!");
+            }
         }
 
         // Subscribe to health changes
@@ -79,6 +92,14 @@ public class EnemyHealthBar : MonoBehaviour
             healthBarInstance = Instantiate(healthBarPrefab, transform, false);
             healthBarInstance.transform.localPosition = healthBarOffset;
             healthBarInstance.transform.localRotation = Quaternion.identity;
+
+            // Set up canvas sorting for prefab-based health bars
+            Canvas prefabCanvas = healthBarInstance.GetComponent<Canvas>();
+            if (prefabCanvas != null)
+            {
+                prefabCanvas.sortingLayerName = sortingLayerName;
+                prefabCanvas.sortingOrder = sortingOrder;
+            }
 
             // Get slider component
             healthSlider = healthBarInstance.GetComponentInChildren<Slider>();
@@ -136,7 +157,8 @@ public class EnemyHealthBar : MonoBehaviour
 
         canvas = healthBarInstance.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
-        canvas.sortingOrder = 10;
+        canvas.sortingLayerName = sortingLayerName;
+        canvas.sortingOrder = sortingOrder;
 
         // Scale the canvas properly - use tiny values
         RectTransform canvasRect = healthBarInstance.GetComponent<RectTransform>();

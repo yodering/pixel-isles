@@ -57,6 +57,8 @@ MonoBehaviour:
   isCurrentlyRunning: 0
   isCrouching: 0
   attackHitbox: {fileID: 0}
+  basicAttackCooldown: 0.25
+  specialAbilityCooldown: 1
   isRunning: 0
   isRunningBackwards: 0
   isStrafingLeft: 0
@@ -219,6 +221,10 @@ MonoBehaviour:
   maxHealth: 50
   currentHealth: 0
   isPlayer: 0
+  showDeathMessage: 1
+  deathMessage: You Died...
+  deathMessageDuration: 3
+  deathSpeechBubble: {fileID: 0}
   OnHealthChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -244,6 +250,17 @@ MonoBehaviour:
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 0
+  teleportWhenStuck: 1
+  stuckTimeBeforeTeleport: 2.5
+  teleportMinDistance: 1.2
+  teleportMaxDistance: 2.5
+  teleportStunDuration: 3
+  teleportEffectPrefab: {fileID: 0}
+  raycastDirections: 16
+  wallAvoidanceWeight: 2
+  useAStarPathfinding: 1
+  pathfindingDistance: 5
+  waypointReachedDistance: 0.5
   attackRange: 1.5
   attackCooldown: 1.5
   attackDamage: 10
@@ -268,6 +285,17 @@ MonoBehaviour:
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 0
+  teleportWhenStuck: 1
+  stuckTimeBeforeTeleport: 2.5
+  teleportMinDistance: 1.2
+  teleportMaxDistance: 2.5
+  teleportStunDuration: 3
+  teleportEffectPrefab: {fileID: 0}
+  raycastDirections: 16
+  wallAvoidanceWeight: 2
+  useAStarPathfinding: 1
+  pathfindingDistance: 5
+  waypointReachedDistance: 0.5
   attackRange: 1.5
   attackCooldown: 1.5
   attackDamage: 10
@@ -292,6 +320,8 @@ MonoBehaviour:
   lowHealthColor: {r: 1, g: 0, b: 0, a: 1}
   mediumHealthThreshold: 0.6
   lowHealthThreshold: 0.3
+  sortingLayerName: Player
+  sortingOrder: 100
 --- !u!114 &-3295932911146398529
 MonoBehaviour:
   m_ObjectHideFlags: 0

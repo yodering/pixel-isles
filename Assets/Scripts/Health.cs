@@ -45,6 +45,13 @@ public class Health : MonoBehaviour
         {
             deathSpeechBubble = FindAnyObjectByType<SpeechBubble>();
         }
+
+        // Enable permanent invincibility in tutorial mode
+        if (isPlayer && GameManager.IsTutorialMode())
+        {
+            isInvincible = true;
+            Debug.Log($"{gameObject.name} is invincible (Tutorial Mode)");
+        }
     }
 
     /// <summary>
@@ -145,13 +152,17 @@ public class Health : MonoBehaviour
 
     void Update()
     {
-        // Handle invincibility timer
+        // Handle invincibility timer (but not in tutorial mode)
         if (isInvincible && invincibilityTimer > 0f)
         {
             invincibilityTimer -= Time.deltaTime;
             if (invincibilityTimer <= 0f)
             {
-                isInvincible = false;
+                // Don't remove invincibility if in tutorial mode
+                if (!(isPlayer && GameManager.IsTutorialMode()))
+                {
+                    isInvincible = false;
+                }
                 invincibilityTimer = 0f;
             }
         }
