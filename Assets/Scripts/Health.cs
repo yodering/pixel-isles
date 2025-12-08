@@ -99,10 +99,10 @@ public class Health : MonoBehaviour
 
         OnDeath?.Invoke();
 
-        // Show death message for player
-        if (isPlayer && showDeathMessage && deathSpeechBubble != null)
+        // Show Dark Souls-style YOU DIED screen for player
+        if (isPlayer)
         {
-            deathSpeechBubble.ShowText(deathMessage, deathMessageDuration);
+            YouDiedScreen.Show();
         }
 
         // Trigger death animation
@@ -131,18 +131,18 @@ public class Health : MonoBehaviour
             collider.enabled = false;
         }
 
-        // Start fade out and destroy after shorter delay
+        // Start fade out for both player and enemies
+        fadeOutTimer = 0f;
         if (!isPlayer)
         {
-            fadeOutTimer = 0f;
             Destroy(gameObject, fadeOutDuration);
         }
     }
 
     void Update()
     {
-        // Handle fade out effect when dead
-        if (isDead && !isPlayer && spriteRenderer != null)
+        // Handle fade out effect when dead (both player and enemies)
+        if (isDead && spriteRenderer != null)
         {
             fadeOutTimer += Time.deltaTime;
             float alpha = Mathf.Lerp(1f, 0f, fadeOutTimer / fadeOutDuration);

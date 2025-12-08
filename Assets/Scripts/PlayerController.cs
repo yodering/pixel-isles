@@ -224,6 +224,14 @@ public class PlayerController : MonoBehaviour
         {
             float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
             GameObject projectileInstance = Instantiate(projectilePrefab, transform.position, Quaternion.Euler(0, 0, angle));
+
+            // Set sorting layer to "Player" so it renders above the world
+            SpriteRenderer[] renderers = projectileInstance.GetComponentsInChildren<SpriteRenderer>();
+            foreach (SpriteRenderer renderer in renderers)
+            {
+                renderer.sortingLayerName = "Player";
+            }
+
             Rigidbody2D rbProjectile = projectileInstance.GetComponent<Rigidbody2D>();
             if (rbProjectile != null)
             {
@@ -276,6 +284,13 @@ public class PlayerController : MonoBehaviour
 
                 // Instantiate the AoE prefab at the player's position
                 GameObject aoeInstance = Instantiate(AoEPrefab, transform.position, Quaternion.identity);
+
+                // Set sorting layer to "Player" so it renders above the world
+                SpriteRenderer[] renderers = aoeInstance.GetComponentsInChildren<SpriteRenderer>();
+                foreach (SpriteRenderer renderer in renderers)
+                {
+                    renderer.sortingLayerName = "Player";
+                }
 
                 // Destroy the instantiated prefab after another 0.5 seconds
                 Destroy(aoeInstance, 0.5f);

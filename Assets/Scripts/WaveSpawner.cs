@@ -451,6 +451,14 @@ public class WaveSpawner : MonoBehaviour
 
         yield return new WaitForSeconds(transitionDelay);
 
+        // Check if player is still alive before transitioning
+        Health playerHealth = FindPlayerHealth();
+        if (playerHealth != null && playerHealth.IsDead())
+        {
+            if (showDebugLogs) Debug.Log("WaveSpawner: Player is dead - cancelling scene transition");
+            yield break;
+        }
+
         SceneLoader sceneLoader = FindAnyObjectByType<SceneLoader>();
 
         if (sceneLoader != null)
@@ -472,6 +480,22 @@ public class WaveSpawner : MonoBehaviour
         {
             Debug.LogWarning("WaveSpawner: No SceneLoader found! Add a SceneLoader to your scene for transitions.");
         }
+    }
+
+    /// <summary>
+    /// Find the player's Health component
+    /// </summary>
+    private Health FindPlayerHealth()
+    {
+        Health[] allHealthComponents = FindObjectsByType<Health>(FindObjectsSortMode.None);
+        foreach (Health health in allHealthComponents)
+        {
+            if (health.IsPlayer())
+            {
+                return health;
+            }
+        }
+        return null;
     }
 
     // Public getters
