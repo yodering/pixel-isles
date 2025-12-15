@@ -261,6 +261,10 @@ public class YouDiedScreen : MonoBehaviour
     /// </summary>
     private void RestartGame()
     {
+        // Hide the death screen before restarting
+        Hide();
+
+        // Load the loading screen
         SceneManager.LoadScene("LoadingScreen");
     }
 }

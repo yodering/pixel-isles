@@ -17,15 +17,16 @@ public class AudioManager : MonoBehaviour
     [Header("Player SFX")]
     [SerializeField] private AudioClip playerAttackMelee;
     [SerializeField] private AudioClip playerAttackRanged;
-    [SerializeField] private AudioClip playerHurt;
+    [SerializeField] private AudioClip[] playerHurt; // Array for variations
     [SerializeField] private AudioClip playerDeath;
-    [SerializeField] private AudioClip playerFootstep;
+    [SerializeField] private AudioClip[] playerFootstep; // Array for variations
     [SerializeField] private AudioClip playerAbilityQ;
     [SerializeField] private AudioClip playerAbilityF;
     [SerializeField] private AudioClip playerAbilityE;
 
     [Header("Enemy SFX")]
-    [SerializeField] private AudioClip enemyHurt;
+    [SerializeField] private AudioClip[] enemyFootstep; // Array for variations
+    [SerializeField] private AudioClip[] enemyHurt; // Array for variations
     [SerializeField] private AudioClip enemyDeath;
     [SerializeField] private AudioClip enemyAttack;
     [SerializeField] private AudioClip enemySpawn;
@@ -109,6 +110,15 @@ public class AudioManager : MonoBehaviour
         {
             audioSourcePool.Enqueue(source);
         }
+    }
+
+    /// <summary>
+    /// Get a random clip from an array of clips
+    /// </summary>
+    private AudioClip GetRandomClip(AudioClip[] clips)
+    {
+        if (clips == null || clips.Length == 0) return null;
+        return clips[Random.Range(0, clips.Length)];
     }
 
     /// <summary>
@@ -210,15 +220,16 @@ public class AudioManager : MonoBehaviour
     }
 
     // Convenient methods for specific sounds
-    public void PlayPlayerAttack(bool isRanged) => PlaySFX(isRanged ? playerAttackRanged : playerAttackMelee);
-    public void PlayPlayerHurt() => PlaySFX(playerHurt);
+    public void PlayPlayerAttack(bool isRanged, float volume = 0.6f) => PlaySFX(isRanged ? playerAttackRanged : playerAttackMelee, volume);
+    public void PlayPlayerHurt() => PlaySFX(GetRandomClip(playerHurt), 0.5f);
     public void PlayPlayerDeath() => PlaySFX(playerDeath);
-    public void PlayPlayerFootstep(float volume = 0.3f) => PlaySFX(playerFootstep, volume);
-    public void PlayPlayerAbilityQ() => PlaySFX(playerAbilityQ);
-    public void PlayPlayerAbilityF() => PlaySFX(playerAbilityF);
-    public void PlayPlayerAbilityE() => PlaySFX(playerAbilityE);
+    public void PlayPlayerFootstep(float volume = 0.3f) => PlaySFX(GetRandomClip(playerFootstep), volume);
+    public void PlayPlayerAbilityQ(float volume = 0.7f) => PlaySFX(playerAbilityQ, volume);
+    public void PlayPlayerAbilityF(float volume = 0.7f) => PlaySFX(playerAbilityF, volume);
+    public void PlayPlayerAbilityE(float volume = 0.6f) => PlaySFX(playerAbilityE, volume);
 
-    public void PlayEnemyHurt() => PlaySFX(enemyHurt);
+    public void PlayEnemyFootstep(float volume = 0.3f) => PlaySFX(GetRandomClip(enemyFootstep), volume);
+    public void PlayEnemyHurt() => PlaySFX(GetRandomClip(enemyHurt), 0.3f);
     public void PlayEnemyDeath() => PlaySFX(enemyDeath);
     public void PlayEnemyAttack() => PlaySFX(enemyAttack);
     public void PlayEnemySpawn() => PlaySFX(enemySpawn, 0.5f);
@@ -254,4 +265,17 @@ public class AudioManager : MonoBehaviour
     {
         StopAllCoroutines();
     }
+
+    // Test methods for debugging
+    [ContextMenu("Test Player Footstep")]
+    private void TestPlayerFootstep() => PlayPlayerFootstep();
+
+    [ContextMenu("Test Player Hurt")]
+    private void TestPlayerHurt() => PlayPlayerHurt();
+
+    [ContextMenu("Test Enemy Footstep")]
+    private void TestEnemyFootstep() => PlayEnemyFootstep();
+
+    [ContextMenu("Test Enemy Hurt")]
+    private void TestEnemyHurt() => PlayEnemyHurt();
 }

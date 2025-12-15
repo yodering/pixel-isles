@@ -17,6 +17,8 @@ public class AnimationController : MonoBehaviour
         [SerializeField] private float specialAbilityCooldown = 1.0f; // Cooldown for special abilities (Alpha1-6)
         
         private float lastBasicAttackTime = 0f;
+        private float lastAttackSoundTime = 0f; // Track when we last played the attack sound
+        private float attackSoundCooldown = 0.3f; // Minimum time between attack sounds
         private float lastSpecialAbility1Time = 0f;
         private float lastSpecialAbility2Time = 0f;
         private float lastCastSpellTime = 0f;
@@ -259,6 +261,14 @@ public class AnimationController : MonoBehaviour
                     isAttacking = true;
                     lastBasicAttackTime = Time.time;
                     bool isRunning = isCurrentlyRunning;
+
+                    // Play melee attack sound (with cooldown to prevent spam)
+                    if (AudioManager.Instance != null && Time.time >= lastAttackSoundTime + attackSoundCooldown)
+                    {
+                        AudioManager.Instance.PlayPlayerAttack(false); // false = melee
+                        lastAttackSoundTime = Time.time;
+                    }
+
                     // Determine the current direction and trigger the appropriate attack attack or attack run attack
                     if (animator.GetBool("isNorth"))
                         TriggerAttack(isRunning, "North");

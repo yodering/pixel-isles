@@ -57,6 +57,10 @@ public class EnemyController : MonoBehaviour
     private int currentWaypointIndex = 0;
     private float lastPathUpdateTime = 0f;
 
+    // Footstep sound timing
+    private float footstepTimer = 0f;
+    private float footstepInterval = 0.5f; // Time between footsteps (slightly slower than player)
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -164,6 +168,25 @@ public class EnemyController : MonoBehaviour
     void FixedUpdate()
     {
         if (rb != null) rb.linearVelocity = desiredVelocity;
+
+        // Play footstep sounds while moving
+        if (desiredVelocity.magnitude > 0.1f && !isAttacking)
+        {
+            footstepTimer += Time.fixedDeltaTime;
+            if (footstepTimer >= footstepInterval)
+            {
+                if (AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.PlayEnemyFootstep();
+                }
+                footstepTimer = 0f;
+            }
+        }
+        else
+        {
+            // Reset timer when not moving
+            footstepTimer = 0f;
+        }
     }
 
     private void StartAttack()

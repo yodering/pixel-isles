@@ -68,6 +68,19 @@ public class Health : MonoBehaviour
 
         Debug.Log($"{gameObject.name} took {damage} damage. Health: {currentHealth}/{maxHealth}");
 
+        // Play hurt sound
+        if (AudioManager.Instance != null)
+        {
+            if (isPlayer)
+            {
+                AudioManager.Instance.PlayPlayerHurt();
+            }
+            else
+            {
+                AudioManager.Instance.PlayEnemyHurt();
+            }
+        }
+
         // Trigger damage animation if available
         if (animator != null)
         {

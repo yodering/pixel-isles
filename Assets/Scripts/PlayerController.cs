@@ -20,6 +20,10 @@ public class PlayerController : MonoBehaviour
         public float projectileSpeed = 10.0f; // Speed at which the projectile travels
         public float shootDelay = 0.5f; // Delay in seconds before the projectile is fired
 
+        // Footstep sound timing
+        private float footstepTimer = 0f;
+        private float footstepInterval = 0.4f; // Time between footsteps
+
         // Ability unlock system
         private int hitCount = 0; // Tracks successful hits on enemies
         private int killCount = 0; // Tracks enemy kills
@@ -53,6 +57,12 @@ public class PlayerController : MonoBehaviour
                 // Q key - Single projectile (unlocks after 2 hits, resets after use)
                 if (Input.GetKeyDown(KeyCode.Q) && isProjectileUnlocked)
                 {
+                    // Play Q ability sound
+                    if (AudioManager.Instance != null)
+                    {
+                        AudioManager.Instance.PlayPlayerAbilityQ();
+                    }
+
                     Invoke(nameof(DelayedShoot), shootDelay);
                     // Reset ability after use
                     isProjectileUnlocked = false;
@@ -62,6 +72,12 @@ public class PlayerController : MonoBehaviour
                 // F key - AOE attack (unlocks after 5 kills, resets after use)
                 if (Input.GetKeyDown(KeyCode.F) && isAoEUnlocked)
                 {
+                    // Play F ability sound
+                    if (AudioManager.Instance != null)
+                    {
+                        AudioManager.Instance.PlayPlayerAbilityF();
+                    }
+
                     StartCoroutine(DeployAoEDelayed());
                     // Reset ability after use
                     isAoEUnlocked = false;
@@ -92,6 +108,22 @@ public class PlayerController : MonoBehaviour
             if (movementDirection != Vector2.zero)
             {
                 rb.MovePosition(rb.position + movementDirection * speed * Time.fixedDeltaTime);
+
+                // Play footstep sounds while moving
+                footstepTimer += Time.fixedDeltaTime;
+                if (footstepTimer >= footstepInterval)
+                {
+                    if (AudioManager.Instance != null)
+                    {
+                        AudioManager.Instance.PlayPlayerFootstep();
+                    }
+                    footstepTimer = 0f;
+                }
+            }
+            else
+            {
+                // Reset timer when not moving
+                footstepTimer = 0f;
             }
         }
 
