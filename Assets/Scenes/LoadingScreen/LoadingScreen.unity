@@ -172,7 +172,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
   sfxMixerGroup: {fileID: 7469512055911382107, guid: 49ee8682e7f4b4221928921820a7215c, type: 2}
   musicMixerGroup: {fileID: 5512721197037264861, guid: 49ee8682e7f4b4221928921820a7215c, type: 2}
-  playerAttackMelee: {fileID: 8300000, guid: d4556bc9d693c44d391f0678765a6b81, type: 3}
+  playerAttackMelee:
+  - {fileID: 8300000, guid: 4efe13249b5474ad8bd44cab2f8bf05e, type: 3}
+  - {fileID: 8300000, guid: 2291da9bd2db7456fb7e55a2bc63885f, type: 3}
   playerAttackRanged: {fileID: 0}
   playerHurt:
   - {fileID: 8300000, guid: d3f968298bc53445a9e6abbddbd11bef, type: 3}

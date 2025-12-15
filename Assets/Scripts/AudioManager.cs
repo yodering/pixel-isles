@@ -15,14 +15,16 @@ public class AudioManager : MonoBehaviour
     private AudioClip currentMusicClip;
 
     [Header("Player SFX")]
-    [SerializeField] private AudioClip playerAttackMelee;
+    [SerializeField] private AudioClip[] playerAttackMelee; // Array for alternating melee sounds (used by E key and Left Click)
     [SerializeField] private AudioClip playerAttackRanged;
     [SerializeField] private AudioClip[] playerHurt; // Array for variations
     [SerializeField] private AudioClip playerDeath;
     [SerializeField] private AudioClip[] playerFootstep; // Array for variations
     [SerializeField] private AudioClip playerAbilityQ;
     [SerializeField] private AudioClip playerAbilityF;
-    [SerializeField] private AudioClip playerAbilityE;
+
+    // Track which melee sound to play next (for alternating)
+    private int currentMeleeIndex = 0;
 
     [Header("Enemy SFX")]
     [SerializeField] private AudioClip[] enemyFootstep; // Array for variations
@@ -122,6 +124,21 @@ public class AudioManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Get the next clip in alternating sequence (for melee attacks)
+    /// </summary>
+    private AudioClip GetAlternatingMeleeClip()
+    {
+        if (playerAttackMelee == null || playerAttackMelee.Length == 0) return null;
+
+        AudioClip clip = playerAttackMelee[currentMeleeIndex];
+
+        // Move to next index, wrapping around to 0 when we reach the end
+        currentMeleeIndex = (currentMeleeIndex + 1) % playerAttackMelee.Length;
+
+        return clip;
+    }
+
+    /// <summary>
     /// Play a one-shot sound effect
     /// </summary>
     public void PlaySFX(AudioClip clip, float volume = 1f, float pitch = 1f)
@@ -136,6 +153,52 @@ public class AudioManager : MonoBehaviour
         source.Play();
 
         activeAudioSources.Add(source);
+    }
+
+    /// <summary>
+    /// Play a one-shot sound effect with fade-out
+    /// </summary>
+    public void PlaySFXWithFadeOut(AudioClip clip, float volume = 1f, float fadeOutDuration = 0.3f, float pitch = 1f)
+    {
+        if (clip == null) return;
+
+        AudioSource source = GetAudioSource();
+        source.clip = clip;
+        source.volume = volume * defaultVolume;
+        source.pitch = pitch;
+        source.loop = false;
+        source.Play();
+
+        activeAudioSources.Add(source);
+
+        // Start fade-out coroutine
+        StartCoroutine(FadeOutSFX(source, fadeOutDuration, volume * defaultVolume));
+    }
+
+    /// <summary>
+    /// Fade out a sound effect over time
+    /// </summary>
+    private System.Collections.IEnumerator FadeOutSFX(AudioSource source, float duration, float startVolume)
+    {
+        if (source == null) yield break;
+
+        float elapsed = 0f;
+        while (elapsed < duration && source != null && source.isPlaying)
+        {
+            elapsed += Time.deltaTime;
+            if (source != null)
+            {
+                source.volume = Mathf.Lerp(startVolume, 0f, elapsed / duration);
+            }
+            yield return null;
+        }
+
+        // Ensure volume is 0 and stop the source
+        if (source != null)
+        {
+            source.volume = 0f;
+            source.Stop();
+        }
     }
 
     /// <summary>
@@ -220,13 +283,29 @@ public class AudioManager : MonoBehaviour
     }
 
     // Convenient methods for specific sounds
-    public void PlayPlayerAttack(bool isRanged, float volume = 0.6f) => PlaySFX(isRanged ? playerAttackRanged : playerAttackMelee, volume);
+    public void PlayPlayerAttack(bool isRanged, float volume = 0.6f)
+    {
+        if (isRanged)
+        {
+            // Ranged attack - use single clip
+            PlaySFX(playerAttackRanged, volume);
+        }
+        else
+        {
+            // Melee attack - alternate between whoosh sounds and fade out quickly
+            AudioClip meleeClip = GetAlternatingMeleeClip();
+            if (meleeClip != null)
+            {
+                PlaySFXWithFadeOut(meleeClip, volume, 0.2f);
+            }
+        }
+    }
+
     public void PlayPlayerHurt() => PlaySFX(GetRandomClip(playerHurt), 0.5f);
     public void PlayPlayerDeath() => PlaySFX(playerDeath);
     public void PlayPlayerFootstep(float volume = 0.3f) => PlaySFX(GetRandomClip(playerFootstep), volume);
     public void PlayPlayerAbilityQ(float volume = 0.7f) => PlaySFX(playerAbilityQ, volume);
     public void PlayPlayerAbilityF(float volume = 0.7f) => PlaySFX(playerAbilityF, volume);
-    public void PlayPlayerAbilityE(float volume = 0.6f) => PlaySFX(playerAbilityE, volume);
 
     public void PlayEnemyFootstep(float volume = 0.3f) => PlaySFX(GetRandomClip(enemyFootstep), volume);
     public void PlayEnemyHurt() => PlaySFX(GetRandomClip(enemyHurt), 0.3f);
