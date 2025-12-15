@@ -132,6 +132,7 @@ GameObject:
   - component: {fileID: 10213670}
   - component: {fileID: 10213674}
   - component: {fileID: 10213675}
+  - component: {fileID: 10213676}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -279,6 +280,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraShake
   enableRotation: 0
   maxRotation: 2
+--- !u!81 &10213676
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 10213668}
+  m_Enabled: 1
 --- !u!1 &79960048
 GameObject:
   m_ObjectHideFlags: 0

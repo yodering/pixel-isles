@@ -119,6 +119,96 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &8518330
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8518333}
+  - component: {fileID: 8518332}
+  - component: {fileID: 8518331}
+  m_Layer: 0
+  m_Name: AudioManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &8518331
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8518330}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1d8e030460d44ed4b5077e9d4a0b083, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneMusicManager
+  loadingMusic: {fileID: 8300000, guid: 1a329d37ed4f24246b93c179171358bb, type: 3}
+  tutorialMusic: {fileID: 8300000, guid: 1a329d37ed4f24246b93c179171358bb, type: 3}
+  defaultMusic: {fileID: 8300000, guid: fafc9fecf932d0941826a945b4701565, type: 3}
+  scene1Music: {fileID: 8300000, guid: c2b37921f0b9c9143ac2b58d45bfcd3d, type: 3}
+  scene2Music: {fileID: 8300000, guid: cbdee625c1892104fb9efb0788890010, type: 3}
+  fadeBetweenTracks: 1
+  fadeDuration: 1.5
+  playOnAwake: 1
+--- !u!114 &8518332
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8518330}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d927a0de76ac4e0f9793065769d599d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioManager
+  sfxMixerGroup: {fileID: 7469512055911382107, guid: 49ee8682e7f4b4221928921820a7215c, type: 2}
+  musicMixerGroup: {fileID: 5512721197037264861, guid: 49ee8682e7f4b4221928921820a7215c, type: 2}
+  playerAttackMelee: {fileID: 0}
+  playerAttackRanged: {fileID: 0}
+  playerHurt: {fileID: 0}
+  playerDeath: {fileID: 0}
+  playerFootstep: {fileID: 0}
+  playerAbilityQ: {fileID: 0}
+  playerAbilityF: {fileID: 0}
+  playerAbilityE: {fileID: 0}
+  enemyHurt: {fileID: 0}
+  enemyDeath: {fileID: 0}
+  enemyAttack: {fileID: 0}
+  enemySpawn: {fileID: 0}
+  buttonClick: {fileID: 0}
+  buttonHover: {fileID: 0}
+  waveComplete: {fileID: 0}
+  levelComplete: {fileID: 0}
+  projectileLaunch: {fileID: 0}
+  projectileHit: {fileID: 0}
+  projectileExplode: {fileID: 0}
+  ambientWind: {fileID: 0}
+  ambientFire: {fileID: 0}
+  maxSimultaneousSounds: 10
+  defaultVolume: 1
+--- !u!4 &8518333
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8518330}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -8.45}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &215855233
 GameObject:
   m_ObjectHideFlags: 0
@@ -1334,3 +1424,4 @@ SceneRoots:
   - {fileID: 1638257771}
   - {fileID: 1118692769}
   - {fileID: 1854826298}
+  - {fileID: 8518333}

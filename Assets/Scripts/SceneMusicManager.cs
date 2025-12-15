@@ -32,8 +32,12 @@ public class SceneMusicManager : MonoBehaviour
     {
         // Subscribe to scene loaded event
         SceneManager.sceneLoaded += OnSceneLoaded;
+    }
 
+    private void Start()
+    {
         // Play music for the initial scene if enabled
+        // Using Start() instead of Awake() ensures AudioManager.Instance is initialized
         if (playOnAwake)
         {
             currentSceneName = SceneManager.GetActiveScene().name;
