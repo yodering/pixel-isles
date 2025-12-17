@@ -451,25 +451,28 @@ public class WaveSpawner : MonoBehaviour
 
         SceneLoader sceneLoader = FindAnyObjectByType<SceneLoader>();
 
-        if (sceneLoader != null)
+        // Always transition even if SceneLoader is missing (e.g. when play starts from a non-loading scene).
+        if (!string.IsNullOrEmpty(nextSceneName))
         {
-            if (!string.IsNullOrEmpty(nextSceneName))
-            {
-                if (showDebugLogs) Debug.Log($"WaveSpawner: Loading scene '{nextSceneName}'");
-                sceneLoader.LoadScene(nextSceneName);
-            }
-            else
-            {
-                // Load next scene in build order
-                int nextSceneIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex + 1;
-                if (showDebugLogs) Debug.Log($"WaveSpawner: Loading scene index {nextSceneIndex}");
-                sceneLoader.LoadSceneByIndex(nextSceneIndex);
-            }
+            if (showDebugLogs) Debug.Log($"WaveSpawner: Loading scene '{nextSceneName}'");
+            if (sceneLoader != null) sceneLoader.LoadScene(nextSceneName);
+            else UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName);
+            yield break;
         }
-        else
+
+        // Load next scene in build order
+        int nextSceneIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex + 1;
+        if (showDebugLogs) Debug.Log($"WaveSpawner: Loading scene index {nextSceneIndex}");
+
+        // Guard: avoid silent failure if the build index is out of range.
+        if (nextSceneIndex < 0 || nextSceneIndex >= UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings)
         {
-            Debug.LogWarning("WaveSpawner: No SceneLoader found! Add a SceneLoader to your scene for transitions.");
+            Debug.LogWarning($"WaveSpawner: Next scene index {nextSceneIndex} is out of range (Scenes In Build: {UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings}).");
+            yield break;
         }
+
+        if (sceneLoader != null) sceneLoader.LoadSceneByIndex(nextSceneIndex);
+        else UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneIndex);
     }
 
     /// <summary>

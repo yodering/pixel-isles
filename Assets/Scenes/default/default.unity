@@ -2079,7 +2079,7 @@ MonoBehaviour:
     It''s over.'
   autoTransitionOnComplete: 1
   transitionDelay: 3
-  nextSceneName: ice
+  nextSceneName: Dialogue_Transition1
   OnWaveStart:
     m_PersistentCalls:
       m_Calls: []

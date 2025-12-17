@@ -2586,7 +2586,7 @@ MonoBehaviour:
     It''s over.'
   autoTransitionOnComplete: 1
   transitionDelay: 3
-  nextSceneName: autumn
+  nextSceneName: Dialogue_Transition2
   OnWaveStart:
     m_PersistentCalls:
       m_Calls: []

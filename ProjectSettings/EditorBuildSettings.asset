@@ -12,14 +12,38 @@ EditorBuildSettings:
     path: Assets/Scenes/LoadingScreen/LoadingScreen.unity
     guid: 1d46ed21c75c441c38094bebfc8efe20
   - enabled: 1
+    path: Assets/Scenes/Dialogue_Prologue.unity
+    guid: 8e3d48a228f664fe5b1450f237d53b43
+  - enabled: 1
+    path: Assets/Scenes/StoryImage_PreDungeon.unity
+    guid: efef6511b016c4bb990d4e6d3242976e
+  - enabled: 1
     path: Assets/Scenes/default/default.unity
     guid: 6dbe69a487df4fb4c895538a1a964b10
+  - enabled: 1
+    path: Assets/Scenes/Dialogue_Transition1.unity
+    guid: dbe8e7c11c2044d0cad1973b8cd4c3c6
+  - enabled: 1
+    path: Assets/Scenes/StoryImage_PreIce.unity
+    guid: e7efd9494d22b4a4b8ce624174b7f5a9
   - enabled: 1
     path: Assets/Scenes/scene-1/ice.unity
     guid: 5456e1ac6d48146a8a34e3bf0554517f
   - enabled: 1
+    path: Assets/Scenes/Dialogue_Transition2.unity
+    guid: 172c1f91b435a43e690f80970a61cbd2
+  - enabled: 1
+    path: Assets/Scenes/StoryImage_PreGreen.unity
+    guid: 0689cd6dc87944f65ba19a80b9e4afdb
+  - enabled: 1
     path: Assets/Scenes/scene-2/autumn.unity
     guid: 5d78e308a0df6432fb68348ef4819b45
+  - enabled: 1
+    path: Assets/Scenes/Dialogue_FinalReveal.unity
+    guid: 9290abff2daa54c6bafd745775026eca
+  - enabled: 1
+    path: Assets/Scenes/StoryImage_Reveal.unity
+    guid: ed1b091ce05724e4f982c89342bc2523
   - enabled: 1
     path: Assets/Scenes/tutorial/tutorial.unity
     guid: 71b47e3e1c1404091adcbcce36d1a193

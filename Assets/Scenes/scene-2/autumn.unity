@@ -1654,7 +1654,7 @@ MonoBehaviour:
     It''s over.'
   autoTransitionOnComplete: 1
   transitionDelay: 3
-  nextSceneName: 
+  nextSceneName: Dialogue_FinalReveal
   OnWaveStart:
     m_PersistentCalls:
       m_Calls: []
