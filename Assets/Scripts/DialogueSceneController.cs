@@ -29,10 +29,15 @@ public class DialogueSceneController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI skipHintText;
 
     [Header("Dialogue Box Settings")]
-    [SerializeField] private float dialogueDisplayDuration = 3f;
-    [SerializeField] private float timeBetweenLines = 0.3f;
-    [SerializeField] private float boxFadeInDuration = 0.5f;
+    [SerializeField] private float dialogueDisplayDuration = 0.8f; // Very fast display
+    [SerializeField] private float timeBetweenLines = 0.05f; // Very fast transitions
+    [SerializeField] private float boxFadeInDuration = 0.15f; // Very fast fade-in
     [SerializeField] private float boxSlideDistance = 50f;
+    [SerializeField] private int maxVisibleBoxes = 5; // After this many, fade out oldest and replace with new
+    [SerializeField] private float boxFadeOutDuration = 0.2f; // Very fast normal fade out
+    [SerializeField] private float boxFadeOutDurationFast = 0.1f; // Ultra fast fade out after hitting max
+    [SerializeField] private float initialDelay = 0.2f; // Initial delay before first dialogue
+    [SerializeField] private float endDelay = 1f; // Delay before auto-transition
 
     [Header("Input Settings")]
     [SerializeField] private KeyCode skipKey = KeyCode.Space;
@@ -81,14 +86,14 @@ public class DialogueSceneController : MonoBehaviour
         if (skipHintText != null)
         {
             skipHintText.text = "Press SPACE or Click to Skip";
-            skipHintText.fontSize = 16; // Smaller font
+            skipHintText.fontSize = 16; // Smaller skip hint
             skipHintText.gameObject.SetActive(true);
         }
     }
 
     private IEnumerator DisplayDialogueSequence()
     {
-        yield return new WaitForSeconds(0.5f); // Initial delay
+        yield return new WaitForSeconds(initialDelay); // Use serialized field
         
         // Allow skipping immediately
         canSkip = true;
@@ -106,14 +111,44 @@ public class DialogueSceneController : MonoBehaviour
             }
         }
 
-        // Wait a bit before auto-transitioning
-        yield return new WaitForSeconds(2f);
+        // Wait before auto-transitioning (use serialized field)
+        yield return new WaitForSeconds(endDelay);
         TransitionToNextScene();
     }
 
     private IEnumerator DisplayDialogueLine(DialogueLine line)
     {
         isDisplaying = true;
+
+        bool isAtMaxCapacity = spawnedDialogueBoxes.Count >= maxVisibleBoxes;
+        
+        // If we have max visible boxes, fade out the oldest one (and do it fast!)
+        if (isAtMaxCapacity)
+        {
+            GameObject oldestBox = spawnedDialogueBoxes[0];
+            if (oldestBox != null)
+            {
+                // Use fast fade-out after we hit max capacity
+                StartCoroutine(FadeOutDialogueBox(oldestBox, boxFadeOutDurationFast));
+                spawnedDialogueBoxes.RemoveAt(0);
+                Destroy(oldestBox, boxFadeOutDurationFast); // Destroy after fast fade completes
+            }
+            
+            // Also fade out the next oldest ones faster for smoother rolling effect
+            for (int i = 0; i < Mathf.Min(2, spawnedDialogueBoxes.Count); i++)
+            {
+                GameObject box = spawnedDialogueBoxes[i];
+                if (box != null)
+                {
+                    CanvasGroup cg = box.GetComponent<CanvasGroup>();
+                    if (cg != null && cg.alpha > 0.6f)
+                    {
+                        // Gradually reduce alpha on older boxes (very fast)
+                        StartCoroutine(FadeToAlpha(cg, 0.6f - (i * 0.15f), 0.1f));
+                    }
+                }
+            }
+        }
 
         // Create dialogue box from prefab or create simple one
         GameObject dialogueBox = CreateDialogueBox(line);
@@ -148,7 +183,7 @@ public class DialogueSceneController : MonoBehaviour
             box.transform.SetParent(dialogueBoxContainer);
 
             RectTransform rectTransform = box.AddComponent<RectTransform>();
-            rectTransform.sizeDelta = new Vector2(800, 150);
+            rectTransform.sizeDelta = new Vector2(1600, 300); // Doubled from 800x150
 
             // Background - pure black
             Image bgImage = box.AddComponent<Image>();
@@ -161,12 +196,12 @@ public class DialogueSceneController : MonoBehaviour
             speakerRect.anchorMin = new Vector2(0, 1);
             speakerRect.anchorMax = new Vector2(0, 1);
             speakerRect.pivot = new Vector2(0, 1);
-            speakerRect.anchoredPosition = new Vector2(20, -10);
-            speakerRect.sizeDelta = new Vector2(760, 30);
+            speakerRect.anchoredPosition = new Vector2(40, -20); // Doubled padding
+            speakerRect.sizeDelta = new Vector2(1520, 60); // Doubled from 760x30
 
             TextMeshProUGUI speakerText = speakerObj.AddComponent<TextMeshProUGUI>();
             speakerText.text = line.speaker + ":";
-            speakerText.fontSize = 20;
+            speakerText.fontSize = 40; // Doubled from 20
             speakerText.fontStyle = FontStyles.Bold;
             speakerText.color = line.speaker == "Voice" ? new Color(1f, 0.8f, 0.2f) : new Color(0.8f, 0.9f, 1f);
 
@@ -176,25 +211,28 @@ public class DialogueSceneController : MonoBehaviour
             RectTransform textRect = textObj.AddComponent<RectTransform>();
             textRect.anchorMin = new Vector2(0, 0);
             textRect.anchorMax = new Vector2(1, 1);
-            textRect.offsetMin = new Vector2(20, 15);
-            textRect.offsetMax = new Vector2(-20, -45);
+            textRect.offsetMin = new Vector2(40, 30); // Doubled padding
+            textRect.offsetMax = new Vector2(-40, -90); // Doubled padding
 
             TextMeshProUGUI dialogueText = textObj.AddComponent<TextMeshProUGUI>();
             dialogueText.text = line.text;
-            dialogueText.fontSize = 18;
+            dialogueText.fontSize = 36; // Doubled from 18
             dialogueText.color = new Color(0.95f, 0.95f, 0.95f);
             dialogueText.alignment = TextAlignmentOptions.TopLeft;
         }
 
-        // Position box (stack downward from top-left)
+        // Position box (stack downward from top-left, reset to top when max boxes reached)
         RectTransform boxRect = box.GetComponent<RectTransform>();
         if (boxRect != null)
         {
             boxRect.anchorMin = new Vector2(0f, 1f); // Top-left anchor
             boxRect.anchorMax = new Vector2(0f, 1f);
             boxRect.pivot = new Vector2(0, 1f); // Pivot at top-left
-            float yOffset = -50f - (currentDialogueIndex * 170f); // Stack boxes downward from top
-            boxRect.anchoredPosition = new Vector2(50f - boxSlideDistance, yOffset);
+            
+            // Calculate position based on current box count
+            int positionIndex = spawnedDialogueBoxes.Count; // Use current count (before adding this box)
+            float yOffset = -100f - (positionIndex * 170f); // Stack from top
+            boxRect.anchoredPosition = new Vector2(100f - boxSlideDistance, yOffset);
         }
 
         return box;
@@ -231,6 +269,62 @@ public class DialogueSceneController : MonoBehaviour
 
         rectTransform.anchoredPosition = endPos;
         canvasGroup.alpha = 1f;
+    }
+
+    private IEnumerator FadeOutDialogueBox(GameObject box, float duration = -1f)
+    {
+        if (box == null) yield break;
+        
+        if (duration < 0) duration = boxFadeOutDuration;
+
+        CanvasGroup canvasGroup = box.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+        {
+            canvasGroup = box.AddComponent<CanvasGroup>();
+        }
+
+        float startAlpha = canvasGroup.alpha;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            // Check if object still exists before accessing it
+            if (box == null || canvasGroup == null) yield break;
+            
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            canvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, t);
+            yield return null;
+        }
+
+        // Final check before setting alpha
+        if (box != null && canvasGroup != null)
+        {
+            canvasGroup.alpha = 0f;
+        }
+    }
+    
+    private IEnumerator FadeToAlpha(CanvasGroup canvasGroup, float targetAlpha, float duration)
+    {
+        if (canvasGroup == null) yield break;
+        
+        float startAlpha = canvasGroup.alpha;
+        float elapsed = 0f;
+        
+        while (elapsed < duration)
+        {
+            if (canvasGroup == null) yield break;
+            
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, t);
+            yield return null;
+        }
+        
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = targetAlpha;
+        }
     }
 
     private void SkipToNextScene()

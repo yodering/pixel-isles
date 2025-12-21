@@ -29,6 +29,7 @@ public class StoryImageSceneController : MonoBehaviour
 
     [Header("Auto Layout (recommended)")]
     [SerializeField] private bool useAutoLayout = true;
+    [SerializeField] private bool useManualPositioning = false; // If true, preserves manual positions from Scene view
     [SerializeField, Range(0.5f, 1f)] private float maxImageHeightPercent = 0.92f;
     [SerializeField] private float sidePadding = 60f; // padding inside the left black bar
     [SerializeField] private float topPadding = 180f;  // distance from top for title block
@@ -46,9 +47,16 @@ public class StoryImageSceneController : MonoBehaviour
 
     void Start()
     {
+        // Auto-populate storyImage from storyImageDisplay if not set
+        if (storyImage == null && storyImageDisplay != null && storyImageDisplay.sprite != null)
+        {
+            storyImage = storyImageDisplay.sprite;
+            Debug.Log($"StoryImageSceneController: Auto-assigned storyImage from storyImageDisplay.sprite");
+        }
+        
         if (storyImage == null)
         {
-            Debug.LogError("StoryImageSceneController: No story image assigned!");
+            Debug.LogError("StoryImageSceneController: No story image assigned! Assign it to 'Story Image' field or 'Story Image Display' component.");
             TransitionToNextScene();
             return;
         }
@@ -120,34 +128,38 @@ public class StoryImageSceneController : MonoBehaviour
             storyImageDisplay.preserveAspect = true;
             storyImageDisplay.color = new Color(1, 1, 1, 0); // Start transparent
 
-            // Center the image, but constrain width
-            RectTransform imageRect = storyImageDisplay.GetComponent<RectTransform>();
-            imageRect.anchorMin = new Vector2(0.5f, 0.5f);
-            imageRect.anchorMax = new Vector2(0.5f, 0.5f);
-            imageRect.pivot = new Vector2(0.5f, 0.5f);
-            imageRect.anchoredPosition = Vector2.zero;
-
-            // Calculate size maintaining aspect ratio using CANVAS units (stable across resolutions).
-            float clampedWidthPercent = Mathf.Clamp(imageWidthPercent, 0.25f, 0.9f);
-            float maxWidth = canvasWidth * clampedWidthPercent;
-            float maxHeight = canvasHeight * maxImageHeightPercent;
-
-            float imageAspect = 1f;
-            if (storyImage.texture != null && storyImage.texture.width > 0)
+            // Only auto-position if not using manual positioning
+            if (!useManualPositioning)
             {
-                imageAspect = (float)storyImage.texture.height / storyImage.texture.width; // height / width
-            }
+                // Center the image, but constrain width
+                RectTransform imageRect = storyImageDisplay.GetComponent<RectTransform>();
+                imageRect.anchorMin = new Vector2(0.5f, 0.5f);
+                imageRect.anchorMax = new Vector2(0.5f, 0.5f);
+                imageRect.pivot = new Vector2(0.5f, 0.5f);
+                imageRect.anchoredPosition = Vector2.zero;
 
-            // Fit image into (maxWidth, maxHeight)
-            float targetWidth = maxWidth;
-            float targetHeight = targetWidth * imageAspect;
-            if (targetHeight > maxHeight)
-            {
-                targetHeight = maxHeight;
-                targetWidth = targetHeight / imageAspect;
-            }
+                // Calculate size maintaining aspect ratio using CANVAS units (stable across resolutions).
+                float clampedWidthPercent = Mathf.Clamp(imageWidthPercent, 0.25f, 0.9f);
+                float maxWidth = canvasWidth * clampedWidthPercent;
+                float maxHeight = canvasHeight * maxImageHeightPercent;
 
-            imageRect.sizeDelta = new Vector2(targetWidth, targetHeight);
+                float imageAspect = 1f;
+                if (storyImage.texture != null && storyImage.texture.width > 0)
+                {
+                    imageAspect = (float)storyImage.texture.height / storyImage.texture.width; // height / width
+                }
+
+                // Fit image into (maxWidth, maxHeight)
+                float targetWidth = maxWidth;
+                float targetHeight = targetWidth * imageAspect;
+                if (targetHeight > maxHeight)
+                {
+                    targetHeight = maxHeight;
+                    targetWidth = targetHeight / imageAspect;
+                }
+
+                imageRect.sizeDelta = new Vector2(targetWidth, targetHeight);
+            }
         }
 
         // Setup title text
@@ -161,33 +173,37 @@ public class StoryImageSceneController : MonoBehaviour
             titleText.enableWordWrapping = true;
             titleText.overflowMode = TextOverflowModes.Overflow;
 
-            RectTransform titleRect = titleText.GetComponent<RectTransform>();
-
-            if (useAutoLayout && storyImageDisplay != null)
+            // Only auto-position if not using manual positioning
+            if (!useManualPositioning)
             {
-                RectTransform imageRect = storyImageDisplay.GetComponent<RectTransform>();
-                float imageWidth = imageRect != null ? imageRect.sizeDelta.x : (canvasWidth * imageWidthPercent);
-                float leftBarWidth = Mathf.Max(0f, (canvasWidth - imageWidth) * 0.5f);
+                RectTransform titleRect = titleText.GetComponent<RectTransform>();
 
-                float paddingX = Mathf.Clamp(sidePadding, 24f, Mathf.Max(24f, leftBarWidth * 0.35f));
-                float maxTextWidth = Mathf.Max(160f, leftBarWidth - paddingX * 2f);
+                if (useAutoLayout && storyImageDisplay != null)
+                {
+                    RectTransform imageRect = storyImageDisplay.GetComponent<RectTransform>();
+                    float imageWidth = imageRect != null ? imageRect.sizeDelta.x : (canvasWidth * imageWidthPercent);
+                    float leftBarWidth = Mathf.Max(0f, (canvasWidth - imageWidth) * 0.5f);
 
-                titleRect.anchorMin = new Vector2(0f, 1f);
-                titleRect.anchorMax = new Vector2(0f, 1f);
-                titleRect.pivot = new Vector2(0f, 1f);
-                titleRect.sizeDelta = new Vector2(maxTextWidth, 100f); // Reduced from 140f
-                titleRect.anchoredPosition = new Vector2(paddingX, -topPadding);
-            }
-            else
-            {
-                // Legacy/manual positioning
-                titleRect.anchorMin = new Vector2(0, 0.5f);
-                titleRect.anchorMax = new Vector2(0, 0.5f);
-                titleRect.pivot = new Vector2(0, 0.5f);
-                titleRect.sizeDelta = new Vector2(titleMaxWidth, 100);
-                float leftBarWidth = (canvasWidth * (1f - imageWidthPercent)) / 2f;
-                float xPos = leftBarWidth / 2f - titleMaxWidth / 2f;
-                titleRect.anchoredPosition = new Vector2(xPos, canvasHeight * titlePosition.y - canvasHeight * 0.5f);
+                    float paddingX = Mathf.Clamp(sidePadding, 24f, Mathf.Max(24f, leftBarWidth * 0.35f));
+                    float maxTextWidth = Mathf.Max(160f, leftBarWidth - paddingX * 2f);
+
+                    titleRect.anchorMin = new Vector2(0f, 1f);
+                    titleRect.anchorMax = new Vector2(0f, 1f);
+                    titleRect.pivot = new Vector2(0f, 1f);
+                    titleRect.sizeDelta = new Vector2(maxTextWidth, 100f); // Reduced from 140f
+                    titleRect.anchoredPosition = new Vector2(paddingX, -topPadding);
+                }
+                else
+                {
+                    // Legacy/manual positioning
+                    titleRect.anchorMin = new Vector2(0, 0.5f);
+                    titleRect.anchorMax = new Vector2(0, 0.5f);
+                    titleRect.pivot = new Vector2(0, 0.5f);
+                    titleRect.sizeDelta = new Vector2(titleMaxWidth, 100);
+                    float leftBarWidth = (canvasWidth * (1f - imageWidthPercent)) / 2f;
+                    float xPos = leftBarWidth / 2f - titleMaxWidth / 2f;
+                    titleRect.anchoredPosition = new Vector2(xPos, canvasHeight * titlePosition.y - canvasHeight * 0.5f);
+                }
             }
         }
 
@@ -202,26 +218,30 @@ public class StoryImageSceneController : MonoBehaviour
             subtitleText.enableWordWrapping = true;
             subtitleText.overflowMode = TextOverflowModes.Overflow;
 
-            RectTransform subtitleRect = subtitleText.GetComponent<RectTransform>();
-            RectTransform titleRect = titleText != null ? titleText.GetComponent<RectTransform>() : null;
-            if (useAutoLayout && titleRect != null)
+            // Only auto-position if not using manual positioning
+            if (!useManualPositioning)
             {
-                subtitleRect.anchorMin = titleRect.anchorMin;
-                subtitleRect.anchorMax = titleRect.anchorMax;
-                subtitleRect.pivot = titleRect.pivot;
-                subtitleRect.sizeDelta = new Vector2(titleRect.sizeDelta.x, 100f); // Reduced from 120f
-                // Position subtitle below title with smaller gap
-                subtitleRect.anchoredPosition = titleRect.anchoredPosition - new Vector2(0, titleRect.sizeDelta.y + 20f);
-            }
-            else
-            {
-                subtitleRect.anchorMin = new Vector2(0, 0.5f);
-                subtitleRect.anchorMax = new Vector2(0, 0.5f);
-                subtitleRect.pivot = new Vector2(0, 0.5f);
-                subtitleRect.sizeDelta = new Vector2(titleMaxWidth, 80);
-                if (titleRect != null)
+                RectTransform subtitleRect = subtitleText.GetComponent<RectTransform>();
+                RectTransform titleRect = titleText != null ? titleText.GetComponent<RectTransform>() : null;
+                if (useAutoLayout && titleRect != null)
                 {
-                    subtitleRect.anchoredPosition = titleRect.anchoredPosition - new Vector2(0, subtitleOffset);
+                    subtitleRect.anchorMin = titleRect.anchorMin;
+                    subtitleRect.anchorMax = titleRect.anchorMax;
+                    subtitleRect.pivot = titleRect.pivot;
+                    subtitleRect.sizeDelta = new Vector2(titleRect.sizeDelta.x, 100f); // Reduced from 120f
+                    // Position subtitle below title with smaller gap
+                    subtitleRect.anchoredPosition = titleRect.anchoredPosition - new Vector2(0, titleRect.sizeDelta.y + 20f);
+                }
+                else
+                {
+                    subtitleRect.anchorMin = new Vector2(0, 0.5f);
+                    subtitleRect.anchorMax = new Vector2(0, 0.5f);
+                    subtitleRect.pivot = new Vector2(0, 0.5f);
+                    subtitleRect.sizeDelta = new Vector2(titleMaxWidth, 80);
+                    if (titleRect != null)
+                    {
+                        subtitleRect.anchoredPosition = titleRect.anchoredPosition - new Vector2(0, subtitleOffset);
+                    }
                 }
             }
         }
